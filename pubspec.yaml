@@ -1,0 +1,96 @@
+name: health_app
+description: HealthAI - Your personal AI health companion.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.4.0
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # UI
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.5.0
+  phosphor_flutter: ^2.0.1
+  flutter_markdown: ^0.7.0
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.4.1
+
+  # AI / ML
+  flutter_gemma: ^0.12.4
+  google_generative_ai: ^0.4.0
+
+  # Camera & scanning
+  camera: ^0.11.0
+  image_picker: ^1.1.0
+  mobile_scanner: ^5.1.1
+
+  # Speech
+  speech_to_text: ^7.0.0
+
+  # Database
+  isar: ^3.1.0
+  isar_flutter_libs: ^3.1.0
+  path_provider: ^2.1.0
+
+  # Persistence
+  shared_preferences: ^2.2.0
+
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+
+  # Sharing / export
+  share_plus: ^10.0.0
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Deep links / URL launching
+  url_launcher: ^6.2.0
+
+  # Biometric auth
+  local_auth: ^2.1.0
+
+  # In-app review
+  in_app_review: ^2.0.9
+
+  # Device info
+  device_info_plus: ^10.1.0
+
+  # Health platform
+  health: ^13.1.4
+
+  # Environment
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.0
+  flutter_launcher_icons: ^0.14.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.png"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/images/
+    - assets/fonts/

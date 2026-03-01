@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 460" fill="none">
+
+  <!-- ══ BODY BASE ═══════════════════════════════════════════════════════════ -->
+  <!-- Skin base fill -->
+  <ellipse cx="100" cy="36" rx="22" ry="26" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="1.5"/>
+  <!-- Neck -->
+  <path d="M91 58 Q100 64 109 58 L110 72 Q100 76 90 72 Z" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ TRAPEZIUS ══════════════════════════════════════════════════════════ -->
+  <path id="traps"
+    d="M75 68 Q100 74 125 68 L130 80 Q124 88 113 88 Q100 90 87 88 Q76 88 70 80 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ SHOULDERS ══════════════════════════════════════════════════════════ -->
+  <path id="left_shoulder"
+    d="M70 80 Q54 82 48 94 Q44 106 50 116 Q58 122 68 118 Q78 112 80 100 Q80 88 75 82 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_shoulder"
+    d="M130 80 Q146 82 152 94 Q156 106 150 116 Q142 122 132 118 Q122 112 120 100 Q120 88 125 82 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ CHEST ════════════════════════════════════════════════════════════ -->
+  <path id="chest_left"
+    d="M79 84 Q68 86 64 96 Q60 108 65 118 Q74 126 86 124 Q96 120 98 110 Q100 98 94 88 Q88 82 79 84 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="chest_right"
+    d="M121 84 Q132 86 136 96 Q140 108 135 118 Q126 126 114 124 Q104 120 102 110 Q100 98 106 88 Q112 82 121 84 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ BICEPS ══════════════════════════════════════════════════════════════ -->
+  <path id="left_bicep"
+    d="M48 118 Q38 124 36 138 Q34 154 40 162 Q48 166 56 162 Q64 156 64 142 Q66 126 58 118 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_bicep"
+    d="M152 118 Q162 124 164 138 Q166 154 160 162 Q152 166 144 162 Q136 156 136 142 Q134 126 142 118 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ FOREARMS ════════════════════════════════════════════════════════════ -->
+  <path id="left_forearm"
+    d="M40 164 Q30 172 28 192 Q28 208 36 214 Q44 218 52 212 Q60 204 60 188 Q62 170 52 162 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_forearm"
+    d="M160 164 Q170 172 172 192 Q172 208 164 214 Q156 218 148 212 Q140 204 140 188 Q138 170 148 162 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Hands -->
+  <ellipse cx="36" cy="220" rx="10" ry="8" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="164" cy="220" rx="10" ry="8" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ CORE — ABS GRID ════════════════════════════════════════════════════ -->
+  <!-- Upper abs -->
+  <path id="abs_1l" d="M84 126 Q82 126 82 132 Q82 138 85 140 Q89 141 92 139 Q95 137 95 131 Q95 126 91 124 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="abs_1r" d="M116 126 Q118 126 118 132 Q118 138 115 140 Q111 141 108 139 Q105 137 105 131 Q105 126 109 124 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <!-- Mid abs -->
+  <path id="abs_2l" d="M83 142 Q81 143 81 150 Q81 157 84 158 Q88 159 92 157 Q96 155 96 149 Q96 143 92 141 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="abs_2r" d="M117 142 Q119 143 119 150 Q119 157 116 158 Q112 159 108 157 Q104 155 104 149 Q104 143 108 141 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <!-- Lower abs -->
+  <path id="abs_3l" d="M83 160 Q81 161 81 168 Q81 175 85 176 Q89 177 93 175 Q96 172 96 166 Q96 160 92 158 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="abs_3r" d="M117 160 Q119 161 119 168 Q119 175 115 176 Q111 177 107 175 Q104 172 104 166 Q104 160 108 158 Z" fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ OBLIQUES ════════════════════════════════════════════════════════════ -->
+  <path id="left_oblique"
+    d="M77 122 Q68 128 66 146 Q65 160 70 168 Q76 174 83 170 Q90 164 90 154 Q92 138 86 124 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_oblique"
+    d="M123 122 Q132 128 134 146 Q135 160 130 168 Q124 174 117 170 Q110 164 110 154 Q108 138 114 124 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Torso sides / serratus -->
+  <path d="M65 120 Q62 134 64 150 Q68 158 76 158 L78 148 Q72 144 72 134 Z" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="0.8"/>
+  <path d="M135 120 Q138 134 136 150 Q132 158 124 158 L122 148 Q128 144 128 134 Z" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="0.8"/>
+
+  <!-- ══ HIP / PELVIS ════════════════════════════════════════════════════════ -->
+  <path id="hip"
+    d="M73 178 Q100 188 127 178 L125 196 Q100 202 75 196 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ QUADRICEPS ═════════════════════════════════════════════════════════ -->
+  <path id="left_quad"
+    d="M74 194 Q62 204 58 230 Q54 254 62 266 Q70 274 82 272 Q94 268 97 250 Q100 232 96 206 Q92 196 83 192 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_quad"
+    d="M126 194 Q138 204 142 230 Q146 254 138 266 Q130 274 118 272 Q106 268 103 250 Q100 232 104 206 Q108 196 117 192 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Knees -->
+  <ellipse cx="80" cy="278" rx="16" ry="12" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="120" cy="278" rx="16" ry="12" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ CALVES ══════════════════════════════════════════════════════════════ -->
+  <path id="left_calf"
+    d="M66 290 Q60 306 62 330 Q64 350 74 356 Q84 360 92 354 Q100 346 98 326 Q96 304 88 290 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_calf"
+    d="M134 290 Q140 306 138 330 Q136 350 126 356 Q116 360 108 354 Q100 346 102 326 Q104 304 112 290 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Ankles / Feet -->
+  <ellipse cx="78" cy="364" rx="14" ry="9" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="122" cy="364" rx="14" ry="9" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <path d="M64 368 Q78 374 92 370 L90 378 Q78 382 66 376 Z" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="0.8"/>
+  <path d="M136 368 Q122 374 108 370 L110 378 Q122 382 134 376 Z" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="0.8"/>
+
+</svg>

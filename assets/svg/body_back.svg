@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 460" fill="none">
+
+  <!-- ══ BACK BODY BASE ══════════════════════════════════════════════════════ -->
+  <!-- Head (back) -->
+  <ellipse cx="100" cy="36" rx="22" ry="26" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="1.5"/>
+  <!-- Neck (back) -->
+  <path d="M91 58 Q100 64 109 58 L110 72 Q100 76 90 72 Z" fill="#1e1e2e" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ TRAPEZIUS (upper back / neck) ══════════════════════════════════════ -->
+  <path id="traps"
+    d="M70 68 Q100 60 130 68 L136 88 Q124 100 112 100 Q100 102 88 100 Q76 100 64 88 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ REAR DELTOIDS ═══════════════════════════════════════════════════════ -->
+  <path id="left_shoulder"
+    d="M64 90 Q50 92 44 106 Q40 118 46 128 Q54 134 64 130 Q74 124 76 112 Q78 98 72 92 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_shoulder"
+    d="M136 90 Q150 92 156 106 Q160 118 154 128 Q146 134 136 130 Q126 124 124 112 Q122 98 128 92 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ LATS (latissimus dorsi) ════════════════════════════════════════════ -->
+  <path id="lats_left"
+    d="M64 102 Q54 112 52 132 Q50 154 56 168 Q62 178 72 178 Q84 176 88 162 Q92 146 90 128 Q88 110 80 102 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="lats_right"
+    d="M136 102 Q146 112 148 132 Q150 154 144 168 Q138 178 128 178 Q116 176 112 162 Q108 146 110 128 Q112 110 120 102 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ RHOMBOIDS / MID BACK ════════════════════════════════════════════════ -->
+  <path id="middle_back"
+    d="M86 100 Q100 96 114 100 L116 134 Q100 140 84 134 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ LOWER BACK (erectors) ════════════════════════════════════════════ -->
+  <path id="lower_back"
+    d="M88 140 Q100 144 112 140 L113 175 Q100 180 87 175 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ TRICEPS ════════════════════════════════════════════════════════════ -->
+  <path id="left_tricep"
+    d="M46 130 Q36 136 34 152 Q32 168 38 174 Q46 178 54 174 Q62 168 62 152 Q64 136 56 130 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_tricep"
+    d="M154 130 Q164 136 166 152 Q168 168 162 174 Q154 178 146 174 Q138 168 138 152 Q136 136 144 130 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ FOREARMS (back) ════════════════════════════════════════════════════ -->
+  <path id="left_forearm"
+    d="M38 176 Q28 186 26 206 Q26 222 34 228 Q42 232 50 226 Q58 218 58 202 Q60 182 50 174 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_forearm"
+    d="M162 176 Q172 186 174 206 Q174 222 166 228 Q158 232 150 226 Q142 218 142 202 Q140 182 150 174 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Hands (back) -->
+  <ellipse cx="34" cy="234" rx="10" ry="8" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="166" cy="234" rx="10" ry="8" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ GLUTES ═══════════════════════════════════════════════════════════════ -->
+  <path id="glutes_left"
+    d="M73 178 Q62 186 60 204 Q58 220 66 228 Q74 234 84 230 Q94 224 96 210 Q98 194 92 182 Q86 174 76 176 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="glutes_right"
+    d="M127 178 Q138 186 140 204 Q142 220 134 228 Q126 234 116 230 Q106 224 104 210 Q102 194 108 182 Q114 174 124 176 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ HAMSTRINGS ══════════════════════════════════════════════════════════ -->
+  <path id="left_hamstring"
+    d="M62 230 Q54 244 54 266 Q54 286 62 298 Q70 306 80 304 Q90 300 94 286 Q98 270 96 250 Q94 230 84 224 Q74 218 66 226 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_hamstring"
+    d="M138 230 Q146 244 146 266 Q146 286 138 298 Q130 306 120 304 Q110 300 106 286 Q102 270 104 250 Q106 230 116 224 Q126 218 134 226 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Knees (back) -->
+  <ellipse cx="78" cy="308" rx="16" ry="12" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="122" cy="308" rx="16" ry="12" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- ══ CALVES (back) ═══════════════════════════════════════════════════════ -->
+  <path id="left_calf"
+    d="M64 320 Q56 338 58 360 Q60 376 70 382 Q80 386 88 380 Q96 372 94 356 Q92 334 84 320 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+  <path id="right_calf"
+    d="M136 320 Q144 338 142 360 Q140 376 130 382 Q120 386 112 380 Q104 372 106 356 Q108 334 116 320 Z"
+    fill="#252538" stroke="#3a3a5c" stroke-width="1"/>
+
+  <!-- Feet (back) -->
+  <ellipse cx="76" cy="388" rx="14" ry="9" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+  <ellipse cx="124" cy="388" rx="14" ry="9" fill="#1a1a2a" stroke="#3a3a5c" stroke-width="1"/>
+
+</svg>

@@ -1,0 +1,7 @@
+afterEvaluate { project ->
+    if (project.hasProperty("android") && project.extensions.getByName("android").hasProperty("namespace")) {
+        if (project.extensions.getByName("android").namespace == null) {
+            project.extensions.getByName("android").namespace = "com.example." + project.name.replaceAll('-', '_')
+        }
+    }
+}
