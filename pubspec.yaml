@@ -23,20 +23,17 @@ dependencies:
   flutter_animate: ^4.5.0
   phosphor_flutter: ^2.0.1
   flutter_markdown: ^0.7.0
-  flutter_svg: ^2.0.10+1
-  cached_network_image: ^3.4.1
+  cached_network_image: ^3.3.0
+  fl_chart: ^0.68.0
 
   # AI / ML
   flutter_gemma: ^0.12.4
   google_generative_ai: ^0.4.0
 
-  # Camera & scanning
+  # Camera & media
   camera: ^0.11.0
   image_picker: ^1.1.0
-  mobile_scanner: ^5.1.1
-
-  # Speech
-  speech_to_text: ^7.0.0
+  mobile_scanner: ^5.0.0
 
   # Database
   isar: ^3.1.0
@@ -46,33 +43,34 @@ dependencies:
   # Persistence
   shared_preferences: ^2.2.0
 
-  # Notifications
-  flutter_local_notifications: ^17.2.3
-  timezone: ^0.9.4
-
-  # Sharing / export
-  share_plus: ^10.0.0
-
-  # Charts
-  fl_chart: ^0.69.0
-
-  # Deep links / URL launching
-  url_launcher: ^6.2.0
-
-  # Biometric auth
-  local_auth: ^2.1.0
-
-  # In-app review
-  in_app_review: ^2.0.9
-
-  # Device info
-  device_info_plus: ^10.1.0
-
-  # Health platform
-  health: ^13.1.4
-
   # Environment
   flutter_dotenv: ^5.1.0
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.0
+
+  # Device / platform
+  device_info_plus: ^12.3.0
+  local_auth: ^2.2.0
+  in_app_review: ^2.0.9
+  url_launcher: ^6.3.0
+  speech_to_text: ^7.0.0
+
+  # Sharing & export
+  share_plus: ^10.1.0
+
+  # Health data
+  health: ^13.1.4
+
+  # Networking
+  http: ^1.2.0
+
+  # Internationalisation
+  intl: ^0.20.0
+
+  # Icons
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
@@ -94,3 +92,6 @@ flutter:
     - .env
     - assets/images/
     - assets/fonts/
+    - assets/animations/
+    - assets/data/
+    - assets/svg/

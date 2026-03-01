@@ -21,10 +21,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.healthai.healthai"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
         targetSdk = 36
         versionCode = flutter.versionCode
@@ -34,7 +31,6 @@ android {
 
     buildTypes {
         release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
@@ -42,6 +38,30 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                val abi = output.filters.find { it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI.name }?.identifier ?: "universal"
+                output.outputFileName = "HealthAI-${variant.versionName}-${variant.buildType.name}-$abi.apk"
+            }
+
+        if (variant.buildType.name == "release") {
+            variant.assembleProvider.get().doLast {
+                val versionName = variant.versionName
+                val destDir = file("${rootProject.projectDir}/../apk/v$versionName")
+                destDir.mkdirs()
+                variant.outputs.forEach { output ->
+                    val outFile = (output as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFile
+                    if (outFile.exists()) {
+                        outFile.copyTo(file("${destDir}/${outFile.name}"), overwrite = true)
+                        println("APK copied to: ${destDir}/${outFile.name}")
+                    }
+                }
+            }
         }
     }
 }

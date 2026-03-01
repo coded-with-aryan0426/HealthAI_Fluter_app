@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <application
-        android:label="healthai"
+        android:label="HealthAI"
         android:name="androidx.multidex.MultiDexApplication"
         android:icon="@mipmap/launcher_icon">
         <activity

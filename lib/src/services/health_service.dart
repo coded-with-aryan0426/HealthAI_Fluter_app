@@ -64,17 +64,20 @@ class HealthService {
       int sleepMinutes = 0;
       int activeCalories = 0;
 
-      for (final point in data) {
-        final value = (point.value as NumericHealthValue).numericValue;
+        for (final point in data) {
+          final raw = point.value;
+          final double numVal = raw is NumericHealthValue
+              ? raw.numericValue.toDouble()
+              : 0.0;
 
-        if (point.type == HealthDataType.STEPS) {
-          steps += value.toInt();
-            } else if (point.type == HealthDataType.SLEEP_ASLEEP) {
-              sleepMinutes += value.toInt();
-            } else if (point.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
-              activeCalories += value.toInt();
+          if (point.type == HealthDataType.STEPS) {
+            steps += numVal.toInt();
+          } else if (point.type == HealthDataType.SLEEP_ASLEEP) {
+            sleepMinutes += numVal.toInt();
+          } else if (point.type == HealthDataType.ACTIVE_ENERGY_BURNED) {
+            activeCalories += numVal.toInt();
+          }
         }
-      }
 
       return HealthSnapshot(
         steps: steps,
