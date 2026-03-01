@@ -8,6 +8,7 @@ import 'package:flutter_gemma/core/message.dart';
 import 'package:flutter_gemma/core/model_response.dart';
 import 'package:flutter_gemma/core/model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ─── HF token key ─────────────────────────────────────────────────────────────
 const String _kHfTokenKey = 'hf_token';
@@ -19,7 +20,13 @@ Future<String?> getStoredHfToken() async {
   final prefs = await SharedPreferences.getInstance();
   final stored = prefs.getString(_kHfTokenKey);
   if (stored != null && stored.isNotEmpty) return stored;
+  
   if (_kEnvHfToken.isNotEmpty) return _kEnvHfToken;
+  
+  // Try dotenv for local .env file
+  final dotenvToken = dotenv.env['HF_TOKEN'];
+  if (dotenvToken != null && dotenvToken.isNotEmpty) return dotenvToken;
+  
   return null;
 }
 
