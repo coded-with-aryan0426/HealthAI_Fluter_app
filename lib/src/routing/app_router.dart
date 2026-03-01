@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/shell/presentation/app_shell.dart';
-import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/habits/presentation/habits_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
@@ -9,6 +8,7 @@ import '../features/diet_scanner/presentation/scanner_screen.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/workout/presentation/workout_player_screen.dart';
 import '../features/workout/presentation/workout_plan_preview_screen.dart';
+import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/workout/presentation/workout_library_screen.dart';
 import '../features/workout/presentation/workout_programs_screen.dart';
 import '../features/workout/presentation/strength_charts_screen.dart';
@@ -25,10 +25,10 @@ import '../features/supplements/presentation/supplement_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
-final shellNavigatorHomeKey = GlobalKey<NavigatorState>(debugLabel: 'home');
+final shellNavigatorDashboardKey = GlobalKey<NavigatorState>(debugLabel: 'dashboard');
+final shellNavigatorWorkoutKey = GlobalKey<NavigatorState>(debugLabel: 'workout');
 final shellNavigatorHabitsKey = GlobalKey<NavigatorState>(debugLabel: 'habits');
 final shellNavigatorNutritionKey = GlobalKey<NavigatorState>(debugLabel: 'nutrition');
-final shellNavigatorProfileKey = GlobalKey<NavigatorState>(debugLabel: 'profile');
 
 GoRouter buildAppRouter({bool showOnboarding = false}) => GoRouter(
   initialLocation: '/splash',
@@ -62,50 +62,50 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
     builder: (context, state, navigationShell) =>
         AppShell(navigationShell: navigationShell),
     branches: [
-      // index 0 – Home
-      StatefulShellBranch(
-        navigatorKey: shellNavigatorHomeKey,
-        routes: [
-          GoRoute(
-            path: '/home',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: DashboardScreen()),
-          ),
-        ],
-      ),
-      // index 1 – Habits
-      StatefulShellBranch(
-        navigatorKey: shellNavigatorHabitsKey,
-        routes: [
-          GoRoute(
-            path: '/habits',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: HabitsScreen()),
-          ),
-        ],
-      ),
-      // index 2 – Nutrition
-      StatefulShellBranch(
-        navigatorKey: shellNavigatorNutritionKey,
-        routes: [
-          GoRoute(
-            path: '/nutrition',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: NutritionScreen()),
-          ),
-        ],
-      ),
-      // index 3 – Profile
-      StatefulShellBranch(
-        navigatorKey: shellNavigatorProfileKey,
-        routes: [
-          GoRoute(
-            path: '/profile',
-            pageBuilder: (context, state) =>
-                const NoTransitionPage(child: ProfileScreen()),
-          ),
-        ],
-      ),
+        // index 0 – Dashboard (home)
+        StatefulShellBranch(
+          navigatorKey: shellNavigatorDashboardKey,
+          routes: [
+            GoRoute(
+              path: '/dashboard',
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: DashboardScreen()),
+            ),
+          ],
+        ),
+        // index 1 – Workout
+        StatefulShellBranch(
+          navigatorKey: shellNavigatorWorkoutKey,
+          routes: [
+            GoRoute(
+              path: '/workout-tab',
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: WorkoutLibraryScreen()),
+            ),
+          ],
+        ),
+        // index 2 – Habits
+        StatefulShellBranch(
+          navigatorKey: shellNavigatorHabitsKey,
+          routes: [
+            GoRoute(
+              path: '/habits',
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: HabitsScreen()),
+            ),
+          ],
+        ),
+        // index 3 – Nutrition
+        StatefulShellBranch(
+          navigatorKey: shellNavigatorNutritionKey,
+          routes: [
+            GoRoute(
+              path: '/nutrition',
+              pageBuilder: (context, state) =>
+                  const NoTransitionPage(child: NutritionScreen()),
+            ),
+          ],
+        ),
     ],
   ),
 
@@ -113,21 +113,24 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
   GoRoute(
     path: '/chat',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) => const MaterialPage(child: ChatScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const ChatScreen()),
+    ),
   ),
   GoRoute(
     path: '/scanner',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) => const MaterialPage(
+    pageBuilder: (context, state) => MaterialPage(
       fullscreenDialog: true,
-      child: ScannerScreen(),
+      child: _SafePopScope(child: const ScannerScreen()),
     ),
   ),
   GoRoute(
     path: '/workout/library',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: WorkoutLibraryScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const WorkoutLibraryScreen()),
+    ),
   ),
   GoRoute(
     path: '/workout/preview',
@@ -136,9 +139,11 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
       final extra = state.extra;
       return MaterialPage(
         fullscreenDialog: true,
-        child: WorkoutPlanPreviewScreen(
-          planData: extra is WorkoutPlanData ? extra : null,
-          planDoc: extra is WorkoutPlanDoc ? extra : null,
+        child: _SafePopScope(
+          child: WorkoutPlanPreviewScreen(
+            planData: extra is WorkoutPlanData ? extra : null,
+            planDoc: extra is WorkoutPlanDoc ? extra : null,
+          ),
         ),
       );
     },
@@ -150,8 +155,10 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
       final extra = state.extra;
       return MaterialPage(
         fullscreenDialog: true,
-        child: WorkoutPlayerScreen(
-          planDoc: extra is WorkoutPlanDoc ? extra : null,
+        child: _SafePopScope(
+          child: WorkoutPlayerScreen(
+            planDoc: extra is WorkoutPlanDoc ? extra : null,
+          ),
         ),
       );
     },
@@ -163,21 +170,23 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
       final data = state.extra as WorkoutSummaryData;
       return MaterialPage(
         fullscreenDialog: true,
-        child: WorkoutSummaryScreen(data: data),
+        child: _SafePopScope(child: WorkoutSummaryScreen(data: data)),
       );
     },
   ),
   GoRoute(
     path: '/workout/progress',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: StrengthChartsScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const StrengthChartsScreen()),
+    ),
   ),
   GoRoute(
     path: '/workout/programs',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: WorkoutProgramsScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const WorkoutProgramsScreen()),
+    ),
   ),
   GoRoute(
     path: '/workout/program-detail',
@@ -185,38 +194,73 @@ List<RouteBase> _buildRoutes(bool showOnboarding) => [
     pageBuilder: (context, state) {
       final program = state.extra as WorkoutProgramDoc;
       return MaterialPage(
-        child: WorkoutProgramDetailScreen(program: program),
+        child: _SafePopScope(child: WorkoutProgramDetailScreen(program: program)),
       );
     },
   ),
   GoRoute(
     path: '/weekly',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: WeeklyOverviewScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const WeeklyOverviewScreen()),
+    ),
   ),
   GoRoute(
     path: '/settings',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: SettingsScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const SettingsScreen()),
+    ),
+  ),
+  GoRoute(
+    path: '/profile',
+    parentNavigatorKey: rootNavigatorKey,
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const ProfileScreen()),
+    ),
   ),
   GoRoute(
     path: '/fasting',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: FastingScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const FastingScreen()),
+    ),
   ),
   GoRoute(
     path: '/body',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: BodyCompositionScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const BodyCompositionScreen()),
+    ),
   ),
   GoRoute(
     path: '/supplements',
     parentNavigatorKey: rootNavigatorKey,
-    pageBuilder: (context, state) =>
-        const MaterialPage(child: SupplementScreen()),
+    pageBuilder: (context, state) => MaterialPage(
+      child: _SafePopScope(child: const SupplementScreen()),
+    ),
   ),
 ];
+
+/// Wraps a full-screen route so that the hardware/gesture back button
+/// pops the route if possible, otherwise goes home — never exits the app.
+class _SafePopScope extends StatelessWidget {
+  const _SafePopScope({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: child,
+    );
+  }
+}

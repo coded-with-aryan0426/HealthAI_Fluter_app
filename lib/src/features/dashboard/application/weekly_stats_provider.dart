@@ -15,6 +15,11 @@ class WeeklyStats {
   final int avgSteps;
   final String? topWorkoutTitle;
 
+  // Macro averages for the 7-day window
+  final int avgCaloriesConsumed;
+  final int avgProteinGrams;
+  final int avgWaterMl;
+
   const WeeklyStats({
     required this.days,
     required this.workouts,
@@ -25,6 +30,9 @@ class WeeklyStats {
     required this.avgSleepMinutes,
     required this.avgSteps,
     this.topWorkoutTitle,
+    this.avgCaloriesConsumed = 0,
+    this.avgProteinGrams = 0,
+    this.avgWaterMl = 0,
   });
 }
 
@@ -75,6 +83,25 @@ final weeklyStatsProvider = Provider<WeeklyStats>((ref) {
       : (stepDays.fold(0, (s, d) => s + d.stepCount) / stepDays.length)
           .round();
 
+  // Macro averages (average over days that have any data)
+  final calDays = days.where((d) => d.caloriesConsumed > 0).toList();
+  final avgCals = calDays.isEmpty
+      ? 0
+      : (calDays.fold(0, (s, d) => s + d.caloriesConsumed) / calDays.length)
+          .round();
+
+  final protDays = days.where((d) => d.proteinGrams > 0).toList();
+  final avgProt = protDays.isEmpty
+      ? 0
+      : (protDays.fold(0, (s, d) => s + d.proteinGrams) / protDays.length)
+          .round();
+
+  final waterDays = days.where((d) => d.waterMl > 0).toList();
+  final avgWater = waterDays.isEmpty
+      ? 0
+      : (waterDays.fold(0, (s, d) => s + d.waterMl) / waterDays.length)
+          .round();
+
   // Most frequent workout title
   final titleCount = <String, int>{};
   for (final w in workouts) {
@@ -97,5 +124,8 @@ final weeklyStatsProvider = Provider<WeeklyStats>((ref) {
     avgSleepMinutes: avgSleep,
     avgSteps: avgSteps,
     topWorkoutTitle: topTitle,
+    avgCaloriesConsumed: avgCals,
+    avgProteinGrams: avgProt,
+    avgWaterMl: avgWater,
   );
 });

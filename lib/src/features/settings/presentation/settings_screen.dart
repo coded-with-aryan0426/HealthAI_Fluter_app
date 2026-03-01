@@ -145,7 +145,7 @@ class _SettingsAppBar extends ConsumerWidget {
       scrolledUnderElevation: 0,
       leading: IconButton(
         icon: _NavBtn(icon: PhosphorIconsRegular.arrowLeft, isDark: isDark),
-        onPressed: () { HapticFeedback.lightImpact(); context.pop(); },
+          onPressed: () { if (context.canPop()) { HapticFeedback.lightImpact(); context.pop(); } },
       ),
       title: Row(mainAxisSize: MainAxisSize.min, children: [
         Container(

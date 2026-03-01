@@ -68,7 +68,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           fitnessLevel: _fitnessLevel,
           dietary: _dietary,
         );
-    if (mounted) context.go('/home');
+    if (mounted) context.go('/dashboard');
   }
 
   bool get _canNext {
@@ -163,7 +163,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const Spacer(),
                       if (_page < 4)
                         GestureDetector(
-                          onTap: () => context.go('/home'),
+                          onTap: () => context.go('/dashboard'),
                           child: Text('Skip',
                               style: TextStyle(
                                   color: Colors.white.withOpacity(0.4),

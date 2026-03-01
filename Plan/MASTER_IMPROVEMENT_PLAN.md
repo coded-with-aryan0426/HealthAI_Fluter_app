@@ -1269,7 +1269,7 @@ Container(height: X, decoration: BoxDecoration(
 49. Fasting 7-day history mini bar chart
 50. Body composition goal weight estimated time label
 51. Strength Charts tab switching (Volume / 1RM / Reps)
-
+a 
 ### Phase 10 — Future (Voice, Barcode, Advanced)
 52. Mic button — verify works on device (already implemented)
 53. Barcode scanner + Open Food Facts API

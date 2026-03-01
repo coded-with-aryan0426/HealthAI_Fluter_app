@@ -188,7 +188,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     // Past-day indicator — true if selected day is before today
     final isPastDay  = _selectedDate.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day));
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       appBar: _buildAppBar(context, completed, habits.length, isPastDay),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -233,21 +235,53 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
   // ── App Bar ─────────────────────────────────────────────────────────────────
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, int completed, int total, bool isPastDay) {
+    final selDate  = _selectedDate;
+    final monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dateLabel  = _isViewingToday
+        ? 'Build consistency, one day at a time'
+        : '${_days[_selectedDayIndex]}, ${monthNames[selDate.month - 1]} ${selDate.day} — $completed of $total habits completed';
+
     return AppBar(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Your Habits',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, height: 1.2)),
-          Text('Build consistency, one day at a time',
+          Row(
+            children: [
+              const Text('Your Habits',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, height: 1.2)),
+              if (isPastDay) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.softIndigo.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('History',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.softIndigo)),
+                ),
+              ],
+            ],
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              dateLabel,
+              key: ValueKey(dateLabel),
               style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+            ),
+          ),
         ],
       ),
       backgroundColor: Colors.transparent,
@@ -257,13 +291,48 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
   // ── Date Picker ─────────────────────────────────────────────────────────────
   Widget _buildDatePicker(bool isDark) {
+    final habits   = ref.read(habitsProvider);
+    final notifier = ref.read(habitsProvider.notifier);
+    final today    = DateTime.now();
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+    final stripDates = _stripDates;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(7, (index) {
           final isSelected = index == _selectedDayIndex;
-          final isToday    = index == DateTime.now().weekday - 1;
+          final isToday    = index == _todayIndex;
+          final cellDate   = stripDates[index];
+          final cellMidnight = DateTime(cellDate.year, cellDate.month, cellDate.day);
+          final isPast     = cellMidnight.isBefore(todayMidnight);
+          final isFuture   = cellMidnight.isAfter(todayMidnight);
+
+          // Completion status for this day
+          Widget historyIndicator = const SizedBox(height: 5);
+          if (isPast && habits.isNotEmpty) {
+            final completed = habits.where((h) => notifier.isCompletedOn(h, cellDate)).length;
+            final allDone   = completed == habits.length;
+            historyIndicator = Icon(
+              allDone ? PhosphorIconsFill.checkCircle : PhosphorIconsFill.xCircle,
+              size: 10,
+              color: isSelected
+                  ? Colors.white.withOpacity(0.85)
+                  : allDone
+                      ? AppColors.dynamicMint.withOpacity(0.85)
+                      : AppColors.danger.withOpacity(0.6),
+            );
+          } else if (isToday && !isSelected) {
+            historyIndicator = Container(
+              width: 5, height: 5,
+              decoration: BoxDecoration(
+                  color: AppColors.softIndigo,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: AppColors.softIndigo.withOpacity(0.5), blurRadius: 4)]),
+            );
+          }
+
           return GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
@@ -276,7 +345,11 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.softIndigo
-                    : isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04),
+                    : isPast && !isSelected
+                        ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06))
+                        : isFuture
+                            ? (isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02))
+                            : isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: isSelected
                     ? [BoxShadow(color: AppColors.softIndigo.withOpacity(0.5), blurRadius: 12, offset: const Offset(0, 4))]
@@ -290,7 +363,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           fontWeight: FontWeight.bold,
                           color: isSelected
                               ? Colors.white
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+                              : isFuture
+                                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.2)
+                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
                   const SizedBox(height: 6),
                   Text(_dates[index],
                       style: TextStyle(
@@ -298,18 +373,11 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           fontWeight: FontWeight.bold,
                           color: isSelected
                               ? Colors.white
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                              : isFuture
+                                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.25)
+                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                   const SizedBox(height: 4),
-                  if (isToday && !isSelected)
-                    Container(
-                      width: 5, height: 5,
-                      decoration: BoxDecoration(
-                          color: AppColors.softIndigo,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.softIndigo.withOpacity(0.5), blurRadius: 4)]),
-                    )
-                  else
-                    const SizedBox(height: 5),
+                  historyIndicator,
                 ],
               ),
             ),
@@ -595,7 +663,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
 
   // ── Categorised Habits List ──────────────────────────────────────────────────
   Widget _buildCategorisedHabitsList(BuildContext context, List<HabitDoc> habits, bool isDark) {
-    final isToday  = _selectedDayIndex == DateTime.now().weekday - 1;
+    final isToday  = _isViewingToday;
+    final isPast   = _selectedDate.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day));
     final notifier = ref.read(habitsProvider.notifier);
 
     // Group habits by category, preserve insertion order of first occurrence
@@ -610,9 +679,28 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section title
-          Text(
-            isToday ? "Today's Goals" : "Goals for ${_days[_selectedDayIndex]}",
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Text(
+                isToday ? "Today's Goals" : "Goals for ${_days[_selectedDayIndex]}",
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              if (isPast) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.softIndigo.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('View Only',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.softIndigo)),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 16),
 
@@ -644,7 +732,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               final catIcon      = _categoryIcon(category);
               final catLabel     = _categoryLabel(category);
 
-              // Count completions for this category today
+              // Count completions for this category on selected day
               final catDone = catHabits.where((h) => notifier.isCompletedOn(h, _selectedDate)).length;
 
               return Column(
@@ -721,11 +809,12 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                             habit: habit,
                             isDark: isDark,
                             isCompleted: isCompleted,
-                            onToggle: () {
+                            isReadOnly: isPast,  // past days are view-only
+                            onToggle: isToday ? () {
                               HapticFeedback.mediumImpact();
                               ref.read(habitsProvider.notifier).toggle(habit.id, _selectedDate);
-                            },
-                            onDelete: () => ref.read(habitsProvider.notifier).remove(habit.id),
+                            } : null,
+                            onDelete: isToday ? () => ref.read(habitsProvider.notifier).remove(habit.id) : null,
                           ).animate(delay: Duration(milliseconds: sectionIndex * 60 + idx * 50))
                               .fade(duration: 350.ms)
                               .slideX(begin: 0.08, end: 0, duration: 350.ms),
@@ -752,6 +841,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     int    selectedColor     = template?.colorValue ?? 0xFF6366F1;
     String selectedCategory  = template?.category   ?? 'general';
     String selectedFrequency = template?.frequency  ?? 'daily';
+    bool   reminderEnabled   = false;
+    TimeOfDay reminderTime   = const TimeOfDay(hour: 8, minute: 0);
 
     showModalBottomSheet(
       context: context,
@@ -934,12 +1025,116 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                       ),
                       const SizedBox(height: 20),
 
+                      // ── Reminder toggle ───────────────────────────────────────
+                      Text('Reminder',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.05) : AppColors.cloudGray,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(PhosphorIconsRegular.bell,
+                                size: 18,
+                                color: reminderEnabled
+                                    ? AppColors.softIndigo
+                                    : Theme.of(ctx).colorScheme.onSurface.withOpacity(0.4)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                reminderEnabled
+                                    ? 'Reminder at ${reminderTime.format(ctx)}'
+                                    : 'No reminder',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: reminderEnabled
+                                        ? (isDark ? Colors.white : AppColors.lightTextPrimary)
+                                        : Theme.of(ctx).colorScheme.onSurface.withOpacity(0.45)),
+                              ),
+                            ),
+                            if (reminderEnabled)
+                              GestureDetector(
+                                onTap: () async {
+                                  HapticFeedback.selectionClick();
+                                  final picked = await showTimePicker(
+                                    context: ctx,
+                                    initialTime: reminderTime,
+                                    builder: (context, child) => Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                                          primary: AppColors.softIndigo,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setSheetState(() => reminderTime = picked);
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.softIndigo.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text('Change',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.softIndigo)),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            Switch.adaptive(
+                              value: reminderEnabled,
+                              activeColor: AppColors.softIndigo,
+                              onChanged: (val) async {
+                                if (val) {
+                                  // Open time picker immediately when enabling
+                                  final picked = await showTimePicker(
+                                    context: ctx,
+                                    initialTime: reminderTime,
+                                    builder: (context, child) => Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: Theme.of(context).colorScheme.copyWith(
+                                          primary: AppColors.softIndigo,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+                                  setSheetState(() {
+                                    reminderEnabled = true;
+                                    if (picked != null) reminderTime = picked;
+                                  });
+                                } else {
+                                  setSheetState(() => reminderEnabled = false);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
                       SizedBox(
                         width: double.infinity, height: 52,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (titleCtrl.text.trim().isNotEmpty) {
-                              ref.read(habitsProvider.notifier).add(
+                              final now = DateTime.now();
+                              final reminder = reminderEnabled
+                                  ? DateTime(now.year, now.month, now.day, reminderTime.hour, reminderTime.minute)
+                                  : null;
+                              await ref.read(habitsProvider.notifier).add(
                                 title: titleCtrl.text.trim(),
                                 iconName: selectedIcon,
                                 colorValue: selectedColor,
@@ -950,8 +1145,23 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                     : selectedFrequency == 'weekly5'
                                         ? 5
                                         : 3,
+                                reminderTime: reminder,
                               );
-                              Navigator.pop(ctx);
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                                HapticFeedback.mediumImpact();
+                                final msg = reminderEnabled
+                                    ? '${titleCtrl.text.trim()} added! Reminder set for ${reminderTime.format(context)} ✓'
+                                    : '${titleCtrl.text.trim()} added ✓';
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                  content: Text(msg),
+                                  duration: const Duration(seconds: 3),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: AppColors.softIndigo.withOpacity(0.9),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+                                ));
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -1254,15 +1464,17 @@ class _HabitCard extends StatefulWidget {
   final HabitDoc habit;
   final bool isDark;
   final bool isCompleted;
-  final VoidCallback onToggle;
-  final VoidCallback onDelete;
+  final bool isReadOnly;
+  final VoidCallback? onToggle;
+  final VoidCallback? onDelete;
 
   const _HabitCard({
     required this.habit,
     required this.isDark,
     required this.isCompleted,
-    required this.onToggle,
-    required this.onDelete,
+    this.isReadOnly = false,
+    this.onToggle,
+    this.onDelete,
   });
 
   @override
@@ -1310,7 +1522,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
 
     return Dismissible(
       key: ValueKey(h.id),
-      direction: DismissDirection.endToStart,
+      direction: widget.isReadOnly ? DismissDirection.none : DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
@@ -1319,11 +1531,11 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
             borderRadius: BorderRadius.circular(20)),
         child: const Icon(PhosphorIconsFill.trash, color: AppColors.danger),
       ),
-      confirmDismiss: (_) async {
+      confirmDismiss: widget.isReadOnly ? null : (_) async {
         HapticFeedback.mediumImpact();
         return true;
       },
-      onDismissed: (_) => widget.onDelete(),
+      onDismissed: widget.onDelete == null ? null : (_) => widget.onDelete!(),
       child: AnimatedContainer(
         duration: 300.ms,
         padding: const EdgeInsets.all(16),
@@ -1411,18 +1623,22 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
               ),
             ),
             GestureDetector(
-              onTap: widget.onToggle,
+              onTap: widget.isReadOnly ? null : widget.onToggle,
               child: AnimatedContainer(
                 duration: 300.ms,
                 width: 44, height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.isCompleted ? color : Colors.transparent,
+                  color: widget.isCompleted
+                      ? color.withOpacity(widget.isReadOnly ? 0.5 : 1.0)
+                      : Colors.transparent,
                   border: Border.all(
-                    color: widget.isCompleted ? color : Colors.grey.withOpacity(0.4),
+                    color: widget.isCompleted
+                        ? color.withOpacity(widget.isReadOnly ? 0.4 : 1.0)
+                        : Colors.grey.withOpacity(0.4),
                     width: 2,
                   ),
-                  boxShadow: widget.isCompleted
+                  boxShadow: widget.isCompleted && !widget.isReadOnly
                       ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 10)]
                       : null,
                 ),
@@ -1431,8 +1647,8 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                   transitionBuilder: (child, anim) =>
                       ScaleTransition(scale: anim, child: child),
                   child: widget.isCompleted
-                      ? const Icon(PhosphorIconsBold.check,
-                          key: ValueKey('check'), color: Colors.white, size: 20)
+                      ? Icon(PhosphorIconsBold.check,
+                          key: const ValueKey('check'), color: Colors.white.withOpacity(widget.isReadOnly ? 0.7 : 1.0), size: 20)
                       : const SizedBox(key: ValueKey('empty')),
                 ),
               ),
@@ -1445,11 +1661,38 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
 }
 
 // ── AI Habit Insight Card ─────────────────────────────────────────────────────
-class _HabitAiInsightCard extends ConsumerWidget {
+class _HabitAiInsightCard extends ConsumerStatefulWidget {
+  const _HabitAiInsightCard();
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HabitAiInsightCard> createState() => _HabitAiInsightCardState();
+}
+
+class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _spinCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+  }
+
+  @override
+  void dispose() {
+    _spinCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final insightAsync = ref.watch(habitInsightProvider);
     final isDark       = Theme.of(context).brightness == Brightness.dark;
+
+    // Stop spinner when loading is done
+    ref.listen(habitInsightProvider, (_, next) {
+      if (!next.isLoading) _spinCtrl.stop();
+    });
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1517,23 +1760,31 @@ class _HabitAiInsightCard extends ConsumerWidget {
                         GestureDetector(
                           onTap: () {
                             HapticFeedback.lightImpact();
+                            _spinCtrl.repeat();
                             ref.read(habitInsightProvider.notifier).refresh();
                           },
-                          child: Icon(PhosphorIconsRegular.arrowsClockwise,
-                              size: 13, color: AppColors.softIndigo.withOpacity(0.4)),
+                          child: RotationTransition(
+                            turns: _spinCtrl,
+                            child: Icon(PhosphorIconsRegular.arrowsClockwise,
+                                size: 15, color: AppColors.softIndigo.withOpacity(0.6)),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      text,
-                      style: TextStyle(
-                          fontSize: 13,
-                          height: 1.5,
-                          fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? Colors.white.withOpacity(0.8)
-                              : AppColors.lightTextPrimary),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      child: Text(
+                        text,
+                        key: ValueKey(text),
+                        style: TextStyle(
+                            fontSize: 13,
+                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark
+                                ? Colors.white.withOpacity(0.8)
+                                : AppColors.lightTextPrimary),
+                      ),
                     ),
                   ],
                 ),

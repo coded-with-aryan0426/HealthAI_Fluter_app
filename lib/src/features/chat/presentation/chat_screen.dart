@@ -452,7 +452,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             leading: IconButton(
               icon: Icon(PhosphorIconsRegular.caretLeft,
                   color: isDark ? Colors.white : AppColors.lightTextPrimary, size: 22),
-              onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/dashboard');
+                  }
+                },
             ),
             titleSpacing: 0,
             centerTitle: false,

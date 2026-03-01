@@ -56,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (widget.showOnboarding) {
       context.go('/onboarding');
     } else {
-      context.go('/home');
+      context.go('/dashboard');
     }
   }
 

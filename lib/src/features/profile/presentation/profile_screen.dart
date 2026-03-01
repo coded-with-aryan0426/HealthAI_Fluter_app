@@ -45,22 +45,24 @@ class ProfileScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final today = ref.watch(dailyActivityProvider);
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _ProfileSliverAppBar(isDark: isDark),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 20),
-                _BodyMetricsStrip(isDark: isDark)
-                    .animate().fadeIn(delay: 60.ms)
-                    .slideY(begin: 0.06, duration: 380.ms, curve: Curves.easeOutCubic),
-                const SizedBox(height: 20),
-                _WeeklyActivityCard(isDark: isDark, today: today)
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _ProfileSliverAppBar(isDark: isDark),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  const SizedBox(height: 20),
+                  _BodyMetricsStrip(isDark: isDark)
+                      .animate().fadeIn(delay: 60.ms)
+                      .slideY(begin: 0.06, duration: 380.ms, curve: Curves.easeOutCubic),
+                  const SizedBox(height: 20),
+                  _WeeklyActivityCard(isDark: isDark, today: today)
                     .animate().fadeIn(delay: 120.ms)
                     .slideY(begin: 0.06, duration: 380.ms, curve: Curves.easeOutCubic),
                 const SizedBox(height: 20),
@@ -83,11 +85,12 @@ class ProfileScreen extends ConsumerWidget {
                 _AISummaryCard(isDark: isDark)
                     .animate().fadeIn(delay: 420.ms)
                     .slideY(begin: 0.06, duration: 380.ms, curve: Curves.easeOutCubic),
-                const SizedBox(height: 120),
-              ]),
+                  const SizedBox(height: 120),
+                ]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -111,10 +114,12 @@ class _ProfileSliverAppBar extends ConsumerWidget {
       backgroundColor: isDark ? AppColors.deepObsidian : Colors.white,
       elevation: 0,
       scrolledUnderElevation: 0,
-      leading: IconButton(
-        icon: _NavBtn(icon: PhosphorIconsRegular.arrowLeft, isDark: isDark),
-        onPressed: () { HapticFeedback.lightImpact(); context.pop(); },
-      ),
+      leading: context.canPop()
+          ? IconButton(
+              icon: _NavBtn(icon: PhosphorIconsRegular.arrowLeft, isDark: isDark),
+              onPressed: () { HapticFeedback.lightImpact(); context.pop(); },
+            )
+          : null,
       actions: [
         IconButton(
           icon: _NavBtn(icon: PhosphorIconsRegular.gear, isDark: isDark),

@@ -53,68 +53,69 @@ class _WorkoutLibraryScreenState
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.deepObsidian : const Color(0xFFF7F8FC),
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 120,
-            backgroundColor:
-                isDark ? AppColors.deepObsidian : Colors.white,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(PhosphorIconsRegular.arrowLeft,
+      return Scaffold(
+        backgroundColor:
+            isDark ? AppColors.deepObsidian : const Color(0xFFF7F8FC),
+        body: NestedScrollView(
+          headerSliverBuilder: (_, __) => [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 120,
+              backgroundColor:
+                  isDark ? AppColors.deepObsidian : Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              automaticallyImplyLeading: false,
+              leading: context.canPop()
+                  ? IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(PhosphorIconsRegular.arrowLeft,
+                            color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                            size: 18),
+                      ),
+                      onPressed: () => context.pop(),
+                    )
+                  : null,
+              flexibleSpace: FlexibleSpaceBar(
+                titlePadding: EdgeInsets.fromLTRB(
+                    context.canPop() ? 56 : 16, 0, 16, 52),
+                title: Text(
+                  'Workout',
+                  style: TextStyle(
                     color: isDark
                         ? Colors.white
                         : AppColors.lightTextPrimary,
-                    size: 18),
-              ),
-              onPressed: () => context.pop(),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding:
-                  const EdgeInsets.fromLTRB(56, 0, 16, 52),
-              title: Text(
-                'Workout',
-                style: TextStyle(
-                  color: isDark
-                      ? Colors.white
-                      : AppColors.lightTextPrimary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                  letterSpacing: -0.5,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
+              bottom: TabBar(
+                controller: _tab,
+                labelColor:
+                    isDark ? Colors.white : AppColors.lightTextPrimary,
+                unselectedLabelColor:
+                    isDark ? Colors.white38 : Colors.black38,
+                indicatorColor: AppColors.softIndigo,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'My Plans'),
+                  Tab(text: 'Programs'),
+                  Tab(text: 'History'),
+                ],
+              ),
             ),
-            bottom: TabBar(
-              controller: _tab,
-              labelColor:
-                  isDark ? Colors.white : AppColors.lightTextPrimary,
-              unselectedLabelColor:
-                  isDark ? Colors.white38 : Colors.black38,
-              indicatorColor: AppColors.softIndigo,
-              indicatorWeight: 3,
-              labelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: const [
-                Tab(text: 'My Plans'),
-                Tab(text: 'Programs'),
-                Tab(text: 'History'),
-              ],
-            ),
-          ),
-        ],
+          ],
         body: TabBarView(
           controller: _tab,
           children: [
@@ -135,7 +136,7 @@ class _WorkoutLibraryScreenState
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 13)),
-      ).animate().scale(delay: 400.ms, curve: Curves.easeOutBack),
+        ).animate().scale(delay: 400.ms, curve: Curves.easeOutBack),
     );
   }
 }

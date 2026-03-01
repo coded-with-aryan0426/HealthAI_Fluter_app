@@ -199,6 +199,18 @@ class UserNotifier extends Notifier<UserDoc> {
     state = _createDefault();
   }
 
+  /// Unlock one or more achievements by ID (no-op for already-unlocked ones).
+  Future<List<String>> unlockAchievements(List<String> ids) async {
+    final current = List<String>.from(state.unlockedAchievements);
+    final newlyUnlocked = ids.where((id) => !current.contains(id)).toList();
+    if (newlyUnlocked.isEmpty) return [];
+    final updated = _clone(state)
+      ..unlockedAchievements = [...current, ...newlyUnlocked];
+    await _db.writeTxn(() => _db.userDocs.put(updated));
+    state = updated;
+    return newlyUnlocked;
+  }
+
   UserDoc _clone(UserDoc src) {
     return UserDoc()
       ..id = src.id

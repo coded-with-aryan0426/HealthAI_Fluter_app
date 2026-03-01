@@ -9,6 +9,7 @@ import '../application/weekly_stats_provider.dart';
 import '../application/weekly_insight_provider.dart';
 import '../../../database/models/daily_log_doc.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import '../../../features/profile/application/user_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Personal-Records provider — computes all-time bests from the 7-day window
@@ -108,6 +109,7 @@ class WeeklyOverviewScreen extends ConsumerWidget {
     final stats = ref.watch(weeklyStatsProvider);
     final prs = ref.watch(_personalRecordsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = ref.watch(userProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
@@ -245,12 +247,28 @@ class WeeklyOverviewScreen extends ConsumerWidget {
 
               const SizedBox(height: 28),
 
+              // ── Macro Averages ───────────────────────────────────────────────
+              _SectionTitle(title: 'Macro Averages'),
+              const SizedBox(height: 16),
+
+              _MacroAveragesCard(
+                stats: stats,
+                calorieGoal: user.calorieGoal,
+                proteinGoalG: user.proteinGoalG,
+                waterGoalMl: user.waterGoalMl,
+                isDark: isDark,
+              )
+                  .animate().fadeIn(delay: 480.ms, duration: 400.ms)
+                  .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+
+              const SizedBox(height: 28),
+
               // ── AI Weekly Summary ────────────────────────────────────────────
               _SectionTitle(title: 'AI Coach Summary'),
               const SizedBox(height: 16),
 
               _AiWeeklySummaryCard()
-                  .animate().fadeIn(delay: 500.ms, duration: 400.ms)
+                  .animate().fadeIn(delay: 560.ms, duration: 400.ms)
                   .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
 
               const SizedBox(height: 100),
@@ -1266,9 +1284,409 @@ class _Shimmer extends StatelessWidget {
               decoration: BoxDecoration(
                   color: AppColors.softIndigo.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(4))),
-        ],
+          ],
+        ),
+      ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
+          duration: 1200.ms, color: AppColors.softIndigo.withOpacity(0.05));
+    }
+  }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro Averages Card
+// ─────────────────────────────────────────────────────────────────────────────
+class _MacroAveragesCard extends StatefulWidget {
+  final WeeklyStats stats;
+  final int calorieGoal;
+  final int proteinGoalG;
+  final int waterGoalMl;
+  final bool isDark;
+
+  const _MacroAveragesCard({
+    required this.stats,
+    required this.calorieGoal,
+    required this.proteinGoalG,
+    required this.waterGoalMl,
+    required this.isDark,
+  });
+
+  @override
+  State<_MacroAveragesCard> createState() => _MacroAveragesCardState();
+}
+
+class _MacroAveragesCardState extends State<_MacroAveragesCard>
+    with SingleTickerProviderStateMixin {
+  // Which macro is expanded to show the 7-day mini bar
+  int? _expandedIndex;
+  late AnimationController _barCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _barCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _barCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+
+    final macros = [
+      _MacroRow(
+        label: 'Calories',
+        avg: widget.stats.avgCaloriesConsumed,
+        goal: widget.calorieGoal,
+        unit: 'kcal',
+        color: AppColors.warning,
+        icon: PhosphorIconsFill.flame,
+        days: widget.stats.days.map((d) => d.caloriesConsumed.toDouble()).toList(),
       ),
-    ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
-        duration: 1200.ms, color: AppColors.softIndigo.withOpacity(0.05));
+      _MacroRow(
+        label: 'Protein',
+        avg: widget.stats.avgProteinGrams,
+        goal: widget.proteinGoalG,
+        unit: 'g',
+        color: AppColors.danger,
+        icon: PhosphorIconsFill.egg,
+        days: widget.stats.days.map((d) => d.proteinGrams.toDouble()).toList(),
+      ),
+      _MacroRow(
+        label: 'Water',
+        avg: (widget.stats.avgWaterMl / 1000.0 * 10).round(),
+        goal: (widget.waterGoalMl / 1000.0 * 10).round(),
+        unit: 'L',
+        color: const Color(0xFF3B9EFF),
+        icon: PhosphorIconsFill.dropHalf,
+        days: widget.stats.days.map((d) => d.waterMl / 100.0).toList(),
+        isDecimal: true,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.charcoalGlass : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.dynamicMint.withOpacity(isDark ? 0.15 : 0.1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.dynamicMint.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.dynamicMint.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(PhosphorIconsFill.chartPie,
+                      color: AppColors.dynamicMint, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'MACRO AVERAGES (7-DAY)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: AppColors.dynamicMint.withOpacity(0.85),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            ...macros.asMap().entries.map((e) {
+              final i = e.key;
+              final m = e.value;
+              final pct = m.goal > 0
+                  ? (m.avg / m.goal).clamp(0.0, 1.0)
+                  : 0.0;
+              final isExpanded = _expandedIndex == i;
+
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _expandedIndex = isExpanded ? null : i;
+                    if (!isExpanded) {
+                      _barCtrl.forward(from: 0);
+                    }
+                  });
+                },
+                child: AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (i > 0)
+                        Container(
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(vertical: 12),
+                          color: (isDark
+                                  ? Colors.white
+                                  : Colors.black)
+                              .withOpacity(0.06),
+                        ),
+                      // Label row
+                      Row(
+                        children: [
+                          Icon(m.icon, color: m.color, size: 14),
+                          const SizedBox(width: 8),
+                          Text(
+                            m.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.8)
+                                  : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const Spacer(),
+                          RichText(
+                            text: TextSpan(children: [
+                              TextSpan(
+                                text: m.isDecimal
+                                    ? (m.avg / 10.0).toStringAsFixed(1)
+                                    : '${m.avg}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' / ${m.isDecimal ? (m.goal / 10.0).toStringAsFixed(1) : m.goal} ${m.unit}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: m.color,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ]),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: m.color.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${(pct * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: m.color,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Animated progress bar
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: pct),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, v, __) => Stack(
+                          children: [
+                            Container(
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: m.color.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            ),
+                            FractionallySizedBox(
+                              widthFactor: v,
+                              child: Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: m.color,
+                                  borderRadius: BorderRadius.circular(3),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: m.color.withOpacity(0.4),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Expanded: 7-day mini bar chart
+                      if (isExpanded) ...[
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          height: 52,
+                          child: AnimatedBuilder(
+                            animation: _barCtrl,
+                            builder: (_, __) => _MiniDayBars(
+                              values: m.days,
+                              color: m.color,
+                              goal: m.goal.toDouble(),
+                              isDark: isDark,
+                              progress: _barCtrl.value,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(7, (d) {
+                            final day = DateTime.now()
+                                .subtract(Duration(days: 6 - d));
+                            const names = [
+                              'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+                            ];
+                            return Text(
+                              names[day.weekday % 7],
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: d == 6
+                                    ? m.color
+                                    : (isDark
+                                        ? Colors.white30
+                                        : Colors.black38),
+                                fontWeight: d == 6
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
   }
 }
+
+class _MacroRow {
+  final String label;
+  final int avg;
+  final int goal;
+  final String unit;
+  final Color color;
+  final IconData icon;
+  final List<double> days;
+  final bool isDecimal;
+
+  const _MacroRow({
+    required this.label,
+    required this.avg,
+    required this.goal,
+    required this.unit,
+    required this.color,
+    required this.icon,
+    required this.days,
+    this.isDecimal = false,
+  });
+}
+
+class _MiniDayBars extends StatelessWidget {
+  final List<double> values;
+  final Color color;
+  final double goal;
+  final bool isDark;
+  final double progress;
+
+  const _MiniDayBars({
+    required this.values,
+    required this.color,
+    required this.goal,
+    required this.isDark,
+    required this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _MiniBarPainter(
+        values: values,
+        color: color,
+        goal: goal,
+        progress: progress,
+      ),
+    );
+  }
+}
+
+class _MiniBarPainter extends CustomPainter {
+  final List<double> values;
+  final Color color;
+  final double goal;
+  final double progress;
+
+  const _MiniBarPainter({
+    required this.values,
+    required this.color,
+    required this.goal,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+    final count = values.length;
+    final maxV = math.max(
+        values.reduce(math.max).clamp(1.0, double.infinity),
+        goal > 0 ? goal : 1.0);
+    final barW = (size.width / count) * 0.6;
+    final gap = (size.width / count) * 0.4;
+
+    for (int i = 0; i < count; i++) {
+      final frac = (values[i] / maxV).clamp(0.0, 1.0) * progress;
+      final barH = math.max(frac * size.height, frac > 0 ? 3.0 : 0.0);
+      final x = i * (barW + gap) + gap / 2;
+      final y = size.height - barH;
+
+      final isGoalMet = values[i] >= goal;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y, barW, barH),
+          const Radius.circular(3),
+        ),
+        Paint()
+          ..color = isGoalMet ? color : color.withOpacity(0.3),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MiniBarPainter old) =>
+      old.progress != progress || old.values != values;
+}
+

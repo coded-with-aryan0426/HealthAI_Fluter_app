@@ -78,7 +78,9 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
     final totalCarbs = notifier.totalCarbs;
     final totalFat = notifier.totalFat;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       backgroundColor:
           isDark ? AppColors.deepObsidian : const Color(0xFFF7F8FC),
       body: NestedScrollView(
@@ -90,23 +92,25 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
                 isDark ? AppColors.deepObsidian : Colors.white,
             elevation: 0,
             scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.black.withOpacity(0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(PhosphorIconsRegular.arrowLeft,
-                    color: isDark
-                        ? Colors.white
-                        : AppColors.lightTextPrimary,
-                    size: 18),
-              ),
-              onPressed: () => context.pop(),
-            ),
+              leading: context.canPop()
+                  ? IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.08)
+                              : Colors.black.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(PhosphorIconsRegular.arrowLeft,
+                            color: isDark
+                                ? Colors.white
+                                : AppColors.lightTextPrimary,
+                            size: 18),
+                      ),
+                      onPressed: () => context.pop(),
+                    )
+                  : null,
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 14),
               title: Text(
@@ -231,7 +235,8 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
                     .fadeIn(delay: 400.ms),
 
                 const SizedBox(height: 16),
-            ],
+              ],
+            ),
           ),
         ),
       ),

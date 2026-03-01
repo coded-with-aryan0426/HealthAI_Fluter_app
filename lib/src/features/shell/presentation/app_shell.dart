@@ -19,16 +19,58 @@ class AppShell extends StatelessWidget {
     );
   }
 
+  Future<void> _onBack(BuildContext context) async {
+    // Not on Dashboard tab → go to Dashboard first
+    if (navigationShell.currentIndex != 0) {
+      HapticFeedback.lightImpact();
+      navigationShell.goBranch(0, initialLocation: true);
+      return;
+    }
+    // Already on Dashboard → ask user to confirm exit
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Exit App?'),
+        content: const Text('Are you sure you want to exit HealthAI?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Exit',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true) {
+      // Pop the root navigator to exit
+      if (context.mounted) SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      body: navigationShell,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: const _GradientScannerFab(),
-      bottomNavigationBar: _GlassNavBar(
-        currentIndex: navigationShell.currentIndex,
-        onTap: (i) => _onTap(context, i),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _onBack(context);
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: navigationShell,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton: const _GradientScannerFab(),
+        bottomNavigationBar: _GlassNavBar(
+          currentIndex: navigationShell.currentIndex,
+          onTap: (i) => _onTap(context, i),
+        ),
       ),
     );
   }
@@ -70,44 +112,44 @@ class _GlassNavBar extends StatelessWidget {
             child: SizedBox(
               height: 64,
               child: Row(
-                children: [
-                  // Left side: Home + Habits
-                  _NavItem(
-                    index: 0,
-                    currentIndex: currentIndex,
-                    iconRegular: PhosphorIconsRegular.house,
-                    iconFill: PhosphorIconsFill.house,
-                    label: 'Home',
-                    onTap: () => onTap(0),
-                  ),
-                  _NavItem(
-                    index: 1,
-                    currentIndex: currentIndex,
-                    iconRegular: PhosphorIconsRegular.checkSquareOffset,
-                    iconFill: PhosphorIconsFill.checkSquareOffset,
-                    label: 'Habits',
-                    onTap: () => onTap(1),
-                  ),
-                  // FAB spacer
-                  const SizedBox(width: 76),
-                  // Right side: Nutrition + Profile
-                  _NavItem(
-                    index: 2,
-                    currentIndex: currentIndex,
-                    iconRegular: PhosphorIconsRegular.bowlFood,
-                    iconFill: PhosphorIconsFill.bowlFood,
-                    label: 'Nutrition',
-                    onTap: () => onTap(2),
-                  ),
-                  _NavItem(
-                    index: 3,
-                    currentIndex: currentIndex,
-                    iconRegular: PhosphorIconsRegular.user,
-                    iconFill: PhosphorIconsFill.user,
-                    label: 'Profile',
-                    onTap: () => onTap(3),
-                  ),
-                ],
+                  children: [
+                      // Left side: Dashboard + Workout
+                      _NavItem(
+                        index: 0,
+                        currentIndex: currentIndex,
+                        iconRegular: PhosphorIconsRegular.house,
+                        iconFill: PhosphorIconsFill.house,
+                        label: 'Dashboard',
+                        onTap: () => onTap(0),
+                      ),
+                      _NavItem(
+                        index: 1,
+                        currentIndex: currentIndex,
+                        iconRegular: PhosphorIconsRegular.barbell,
+                        iconFill: PhosphorIconsFill.barbell,
+                        label: 'Workout',
+                        onTap: () => onTap(1),
+                      ),
+                      // FAB spacer
+                      const SizedBox(width: 76),
+                      // Right side: Habits + Nutrition
+                      _NavItem(
+                        index: 2,
+                        currentIndex: currentIndex,
+                        iconRegular: PhosphorIconsRegular.checkSquareOffset,
+                        iconFill: PhosphorIconsFill.checkSquareOffset,
+                        label: 'Habits',
+                        onTap: () => onTap(2),
+                      ),
+                      _NavItem(
+                        index: 3,
+                        currentIndex: currentIndex,
+                        iconRegular: PhosphorIconsRegular.bowlFood,
+                        iconFill: PhosphorIconsFill.bowlFood,
+                        label: 'Nutrition',
+                        onTap: () => onTap(3),
+                      ),
+                  ],
               ),
             ),
           ),

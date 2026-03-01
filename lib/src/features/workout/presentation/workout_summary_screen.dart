@@ -77,6 +77,28 @@ class WorkoutSummaryScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
               child: Column(
                 children: [
+                  // ── Back button ────────────────────────────────────────────
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () {
+                          HapticFeedback.lightImpact();
+                          context.go('/dashboard');
+                        },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: const Icon(PhosphorIconsRegular.arrowLeft,
+                            color: Colors.white70, size: 20),
+                      ),
+                    ),
+                  ),
                   // ── Trophy & Title ─────────────────────────────────────────
                   const SizedBox(height: 24),
                   Container(
@@ -200,7 +222,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         HapticFeedback.mediumImpact();
-                        context.go('/home');
+                        context.go('/dashboard');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: accent,

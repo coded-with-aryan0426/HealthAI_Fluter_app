@@ -77,6 +77,7 @@ class HabitsNotifier extends Notifier<List<HabitDoc>> {
     String category = 'general',
     String frequency = 'daily',
     int targetPerWeek = 7,
+    DateTime? reminderTime,
   }) async {
     final doc = HabitDoc()
       ..title = title
@@ -88,7 +89,8 @@ class HabitsNotifier extends Notifier<List<HabitDoc>> {
       ..targetPerWeek = targetPerWeek
       ..completedDates = []
       ..createdAt = DateTime.now()
-      ..isArchived = false;
+      ..isArchived = false
+      ..reminderTime = reminderTime;
 
     await _db.writeTxn(() => _db.habitDocs.put(doc));
     _load();

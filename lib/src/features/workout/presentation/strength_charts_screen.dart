@@ -9,6 +9,11 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
 import '../application/strength_chart_provider.dart';
 
+// ── Active chart tab provider ─────────────────────────────────────────────────
+enum _ChartTab { volume, oneRM, reps }
+
+final _chartTabProvider = StateProvider<_ChartTab>((ref) => _ChartTab.oneRM);
+
 class StrengthChartsScreen extends ConsumerWidget {
   const StrengthChartsScreen({super.key});
 
@@ -17,6 +22,7 @@ class StrengthChartsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedExercise = ref.watch(selectedExerciseProvider);
     final data = ref.watch(strengthChartDataProvider(selectedExercise));
+    final activeTab = ref.watch(_chartTabProvider);
 
     // Auto-select first exercise if none selected
     if (selectedExercise.isEmpty && data.exerciseNames.isNotEmpty) {
@@ -26,35 +32,34 @@ class StrengthChartsScreen extends ConsumerWidget {
       });
     }
 
-    return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.deepObsidian : const Color(0xFFF7F8FC),
-      body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 110,
-            backgroundColor:
-                isDark ? AppColors.deepObsidian : Colors.white,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.black.withValues(alpha: 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(PhosphorIconsRegular.arrowLeft,
+      return Scaffold(
+        backgroundColor:
+            isDark ? AppColors.deepObsidian : const Color(0xFFF7F8FC),
+        body: NestedScrollView(
+          headerSliverBuilder: (_, __) => [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 110,
+              backgroundColor:
+                  isDark ? AppColors.deepObsidian : Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              automaticallyImplyLeading: false,
+              leading: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white
-                        : AppColors.lightTextPrimary,
-                    size: 18),
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(PhosphorIconsRegular.arrowLeft,
+                      color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                      size: 18),
+                ),
+                onPressed: () => context.pop(),
               ),
-              onPressed: () => context.pop(),
-            ),
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 44),
               title: Text(
@@ -89,43 +94,43 @@ class StrengthChartsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // ── Weight over time ─────────────────────────────────────
-                    _SectionHeader(
-                        title: 'Weight Over Time',
-                        subtitle: selectedExercise,
-                        isDark: isDark),
-                    const SizedBox(height: 12),
-                    _WeightLineChart(
-                      points: data.selectedHistory.points,
-                      accent: AppColors.softIndigo,
+                    // ── Chart Tab Switcher ───────────────────────────────────
+                    _ChartTabBar(
+                      activeTab: activeTab,
                       isDark: isDark,
-                    ).animate().fadeIn(duration: 500.ms),
-                    const SizedBox(height: 24),
+                      onSelect: (tab) {
+                        HapticFeedback.selectionClick();
+                        ref.read(_chartTabProvider.notifier).state = tab;
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
-                    // ── Estimated 1RM trend ──────────────────────────────────
-                    _SectionHeader(
-                        title: 'Estimated 1RM',
-                        subtitle: 'Epley formula',
-                        isDark: isDark),
-                    const SizedBox(height: 12),
-                    _OneRMLineChart(
-                      points: data.selectedHistory.points,
-                      accent: AppColors.dynamicMint,
-                      isDark: isDark,
-                    ).animate(delay: 100.ms).fadeIn(duration: 500.ms),
-                    const SizedBox(height: 24),
+                    // ── Chart (animated switch on tab change) ────────────────
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) => FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.05, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey(activeTab),
+                        child: _buildActiveChart(
+                          activeTab: activeTab,
+                          points: data.selectedHistory.points,
+                          weeklyVolume: data.weeklyVolume,
+                          isDark: isDark,
+                        ),
+                      ),
+                    ),
 
-                    // ── Weekly volume ────────────────────────────────────────
-                    _SectionHeader(
-                        title: 'Weekly Volume',
-                        subtitle: 'Last 12 weeks (kg lifted)',
-                        isDark: isDark),
-                    const SizedBox(height: 12),
-                    _WeeklyVolumeBarChart(
-                      bars: data.weeklyVolume,
-                      accent: AppColors.warning,
-                      isDark: isDark,
-                    ).animate(delay: 200.ms).fadeIn(duration: 500.ms),
                     const SizedBox(height: 24),
 
                     // ── All-time PRs ─────────────────────────────────────────
@@ -147,11 +152,39 @@ class StrengthChartsScreen extends ConsumerWidget {
                                 .slideX(begin: 0.05, end: 0),
                           ),
                     ],
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-      ),
-    );
+        ),
+      );
+    }
+
+    Widget _buildActiveChart({
+    required _ChartTab activeTab,
+    required List<ExerciseDataPoint> points,
+    required List<WeeklyVolumeBar> weeklyVolume,
+    required bool isDark,
+  }) {
+    switch (activeTab) {
+      case _ChartTab.volume:
+        return _WeeklyVolumeBarChart(
+          bars: weeklyVolume,
+          accent: AppColors.warning,
+          isDark: isDark,
+        );
+      case _ChartTab.oneRM:
+        return _OneRMLineChart(
+          points: points,
+          accent: AppColors.dynamicMint,
+          isDark: isDark,
+        );
+      case _ChartTab.reps:
+        return _RepsLineChart(
+          points: points,
+          accent: AppColors.softIndigo,
+          isDark: isDark,
+        );
+    }
   }
 }
 
@@ -211,6 +244,122 @@ class _ExercisePicker extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+// ── Chart Tab Bar ─────────────────────────────────────────────────────────────
+
+class _ChartTabBar extends StatelessWidget {
+  final _ChartTab activeTab;
+  final bool isDark;
+  final ValueChanged<_ChartTab> onSelect;
+
+  const _ChartTabBar({
+    required this.activeTab,
+    required this.isDark,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const tabs = [
+      (_ChartTab.volume,  'Volume',  PhosphorIconsFill.chartBar),
+      (_ChartTab.oneRM,   '1RM',     PhosphorIconsFill.lightning),
+      (_ChartTab.reps,    'Reps',    PhosphorIconsFill.repeat),
+    ];
+
+    final descriptions = {
+      _ChartTab.volume: 'Total kg lifted per week',
+      _ChartTab.oneRM:  'Estimated 1-rep max (Epley)',
+      _ChartTab.reps:   'Max reps in best set per session',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 48,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: tabs.map((t) {
+              final (tab, label, icon) = t;
+              final isActive = tab == activeTab;
+              Color accent;
+              switch (tab) {
+                case _ChartTab.volume: accent = AppColors.warning; break;
+                case _ChartTab.oneRM:  accent = AppColors.dynamicMint; break;
+                case _ChartTab.reps:   accent = AppColors.softIndigo; break;
+              }
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onSelect(tab),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? (isDark ? AppColors.charcoalGlass : Colors.white)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: accent.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icon,
+                            size: 14,
+                            color: isActive
+                                ? accent
+                                : (isDark ? Colors.white38 : Colors.black38)),
+                        const SizedBox(width: 5),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isActive
+                                ? FontWeight.w800
+                                : FontWeight.w500,
+                            color: isActive
+                                ? accent
+                                : (isDark ? Colors.white38 : Colors.black38),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Text(
+            descriptions[activeTab] ?? '',
+            style: TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: isDark ? Colors.white38 : Colors.black38,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -588,6 +737,130 @@ class _WeeklyVolumeBarChart extends StatelessWidget {
                 '${rod.toY.toInt()} kg',
                 TextStyle(color: accent, fontWeight: FontWeight.bold),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Reps line chart ───────────────────────────────────────────────────────────
+
+class _RepsLineChart extends StatelessWidget {
+  final List<ExerciseDataPoint> points;
+  final Color accent;
+  final bool isDark;
+  const _RepsLineChart(
+      {required this.points, required this.accent, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.isEmpty) return _NoDataCard(isDark: isDark);
+
+    // Compute max reps per session: volume / bestWeightKg ≈ reps (use stored totalVolume / bestWeight)
+    final repsPerPoint = points.map((p) {
+      if (p.bestWeightKg <= 0) return 0.0;
+      return (p.totalVolume / p.bestWeightKg);
+    }).toList();
+
+    final spots = repsPerPoint.asMap().entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
+    final maxY = repsPerPoint.isEmpty
+        ? 20.0
+        : repsPerPoint.reduce(math.max) * 1.2;
+
+    return _ChartCard(
+      isDark: isDark,
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (_) => FlLine(
+              color: (isDark ? Colors.white : Colors.black)
+                  .withValues(alpha: 0.06),
+              strokeWidth: 1,
+            ),
+          ),
+          titlesData: FlTitlesData(
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 38,
+                getTitlesWidget: (v, _) => Text(
+                  '${v.toInt()}',
+                  style: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.black38,
+                      fontSize: 10),
+                ),
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: math.max(1, (points.length / 5).floorToDouble()),
+                getTitlesWidget: (v, _) {
+                  final idx = v.toInt();
+                  if (idx < 0 || idx >= points.length) {
+                    return const SizedBox.shrink();
+                  }
+                  final d = points[idx].date;
+                  return Text(
+                    '${d.day}/${d.month}',
+                    style: TextStyle(
+                        color: isDark ? Colors.white38 : Colors.black38,
+                        fontSize: 9),
+                  );
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          minY: 0,
+          maxY: maxY,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: accent,
+              barWidth: 2.5,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+                  radius: 4,
+                  color: accent,
+                  strokeWidth: 2,
+                  strokeColor: isDark ? Colors.black : Colors.white,
+                ),
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    accent.withValues(alpha: 0.20),
+                    accent.withValues(alpha: 0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ],
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems: (spots) => spots
+                  .map((s) => LineTooltipItem(
+                        '${s.y.toStringAsFixed(1)} reps',
+                        TextStyle(
+                            color: accent, fontWeight: FontWeight.bold),
+                      ))
+                  .toList(),
             ),
           ),
         ),

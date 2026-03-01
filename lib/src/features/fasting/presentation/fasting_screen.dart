@@ -103,11 +103,20 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
                 isDark: isDark,
               ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // ── Phase Timeline ───────────────────────────────────
-              if (fastState.isActive)
-                _PhaseTimeline(
+                // ── Horizontal Phase Chips ───────────────────────────
+                _HorizontalPhaseChips(
+                  currentPhase: phase,
+                  elapsedHours: elapsedHours,
+                  isDark: isDark,
+                ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.08),
+
+                const SizedBox(height: 20),
+
+                // ── Phase Timeline ───────────────────────────────────
+                if (fastState.isActive)
+                  _PhaseTimeline(
                   elapsedHours: elapsedHours,
                   targetHours: (fastState.session?.targetHours ?? 16).toDouble(),
                   isDark: isDark,
@@ -135,9 +144,16 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
 
               if (fastState.isActive) const SizedBox(height: 28),
 
-              // ── Recent History ───────────────────────────────────
-              if (history.isNotEmpty)
-                _RecentHistory(history: history, isDark: isDark)
+                // ── Recent History ───────────────────────────────────
+                if (history.isNotEmpty)
+                  _FastingMiniBarChart(history: history, isDark: isDark)
+                      .animate()
+                      .fadeIn(delay: 250.ms, duration: 400.ms),
+
+                if (history.isNotEmpty) const SizedBox(height: 20),
+
+                if (history.isNotEmpty)
+                  _RecentHistory(history: history, isDark: isDark)
                     .animate()
                     .fadeIn(delay: 300.ms, duration: 400.ms),
 
@@ -1073,9 +1089,373 @@ class _RecentHistory extends StatelessWidget {
             ).animate(delay: Duration(milliseconds: i * 60))
                 .fadeIn(duration: 350.ms)
                 .slideY(begin: 0.08, duration: 350.ms);
-          }),
+            }),
+          ],
+        ),
+      );
+    }
+  }
+
+// ── Horizontal Phase Chips ────────────────────────────────────────────────────
+class _HorizontalPhaseChips extends StatefulWidget {
+  final FastingPhase currentPhase;
+  final double elapsedHours;
+  final bool isDark;
+
+  const _HorizontalPhaseChips({
+    required this.currentPhase,
+    required this.elapsedHours,
+    required this.isDark,
+  });
+
+  @override
+  State<_HorizontalPhaseChips> createState() => _HorizontalPhaseChipsState();
+}
+
+class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
+  FastingPhase? _tooltip;
+
+  static const _phaseColors = {
+    FastingPhase.fed:         Color(0xFF3498DB),
+    FastingPhase.fatBurning:  Color(0xFFE67E22),
+    FastingPhase.ketosis:     Color(0xFF9B59B6),
+    FastingPhase.deepKetosis: Color(0xFF8E44AD),
+    FastingPhase.autophagy:   Color(0xFF1ABC9C),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              children: FastingPhase.values.map((p) {
+                final isCurrent = p == widget.currentPhase;
+                final reached = widget.elapsedHours >= p.startsAtHours;
+                final color = _phaseColors[p] ?? _kFastColor;
+
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _tooltip = _tooltip == p ? null : p;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isCurrent
+                          ? color
+                          : reached
+                              ? color.withOpacity(0.15)
+                              : Colors.grey.withOpacity(widget.isDark ? 0.12 : 0.08),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: isCurrent
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.45),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                      border: reached && !isCurrent
+                          ? Border.all(color: color.withOpacity(0.35))
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (reached && !isCurrent)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 5),
+                            child: Icon(
+                              PhosphorIconsFill.checkCircle,
+                              size: 11,
+                              color: color,
+                            ),
+                          ),
+                        Text(
+                          '${p.startsAtHours.toInt()}h · ${p.label}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isCurrent
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isCurrent
+                                ? Colors.white
+                                : reached
+                                    ? color
+                                    : Colors.grey.withOpacity(
+                                        widget.isDark ? 0.5 : 0.45),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          // Tooltip / description on tap
+          if (_tooltip != null)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              child: Container(
+                margin: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: (_phaseColors[_tooltip!] ?? _kFastColor)
+                      .withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: (_phaseColors[_tooltip!] ?? _kFastColor)
+                        .withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  _tooltip!.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: widget.isDark
+                        ? Colors.white.withOpacity(0.75)
+                        : AppColors.lightTextPrimary,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 }
+
+// ── Fasting Mini Bar Chart (last 7 fasts) ────────────────────────────────────
+class _FastingMiniBarChart extends StatefulWidget {
+  final List<FastingDoc> history;
+  final bool isDark;
+
+  const _FastingMiniBarChart({
+    required this.history,
+    required this.isDark,
+  });
+
+  @override
+  State<_FastingMiniBarChart> createState() => _FastingMiniBarChartState();
+}
+
+class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  int? _tappedIndex;
+
+  static const _phaseColors = {
+    FastingPhase.fed:         Color(0xFF3498DB),
+    FastingPhase.fatBurning:  Color(0xFFE67E22),
+    FastingPhase.ketosis:     Color(0xFF9B59B6),
+    FastingPhase.deepKetosis: Color(0xFF8E44AD),
+    FastingPhase.autophagy:   Color(0xFF1ABC9C),
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000))
+      ..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = widget.history.take(7).toList().reversed.toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: widget.isDark ? AppColors.charcoalGlass : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: _kFastColor.withOpacity(widget.isDark ? 0.2 : 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: _kFastColor.withOpacity(0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: _kFastColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(PhosphorIconsFill.chartBar,
+                      color: _kFastColor, size: 14),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'LAST ${recent.length} FASTS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.3,
+                    color: _kFastColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 80,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: recent.asMap().entries.map((e) {
+                  final i = e.key;
+                  final s = e.value;
+                  final phase = FastingNotifier.phaseFromHours(s.durationHours);
+                  final barColor = _phaseColors[phase] ?? _kFastColor;
+                  final frac = (s.durationHours / 24.0).clamp(0.0, 1.0);
+                  final isTapped = _tappedIndex == i;
+                  const names = ['Su', 'M', 'T', 'W', 'Th', 'F', 'Sa'];
+                  final dayLabel = names[s.startTime.weekday % 7];
+
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _tappedIndex = isTapped ? null : i);
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (isTapped)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: barColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                  color: barColor.withOpacity(0.35)),
+                            ),
+                            child: Text(
+                              '${s.durationHours.toStringAsFixed(1)}h',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: barColor,
+                              ),
+                            ),
+                          ),
+                        AnimatedBuilder(
+                          animation: _ctrl,
+                          builder: (_, __) => Container(
+                            width: 22,
+                            height: frac * 64 * _ctrl.value,
+                            decoration: BoxDecoration(
+                              color: s.hitTarget
+                                  ? barColor
+                                  : barColor.withOpacity(0.4),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(5)),
+                              boxShadow: s.hitTarget
+                                  ? [
+                                      BoxShadow(
+                                        color: barColor.withOpacity(0.4),
+                                        blurRadius: 6,
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          dayLabel,
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: widget.isDark
+                                ? Colors.white38
+                                : Colors.black38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Legend row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _LegendDot(color: const Color(0xFF3498DB), label: 'Fed'),
+                const SizedBox(width: 12),
+                _LegendDot(color: const Color(0xFFE67E22), label: 'Fat burn'),
+                const SizedBox(width: 12),
+                _LegendDot(color: const Color(0xFF9B59B6), label: 'Ketosis'),
+                const SizedBox(width: 12),
+                _LegendDot(color: const Color(0xFF1ABC9C), label: 'Autophagy'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 9,
+                color: Colors.grey.withOpacity(0.7),
+                fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+

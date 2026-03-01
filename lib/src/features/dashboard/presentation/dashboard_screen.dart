@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'widgets/hero_activity_rings.dart';
 import '../application/daily_activity_provider.dart';
 import '../application/daily_insight_provider.dart';
@@ -22,6 +23,28 @@ import '../../chat/application/chat_controller.dart'
     show chatPrefilledMessageProvider;
 import '../../../services/notification_service.dart'
     show eveningNudgeSchedulerProvider;
+
+// ── Achievement definitions ───────────────────────────────────────────────────
+const _kAchievements = <String, _AchievementDef>{
+  'first_water':    _AchievementDef('First Drop',        'Logged your first water',         PhosphorIconsFill.drop,        Color(0xFF41C9E2)),
+  'hydration_hero': _AchievementDef('Hydration Hero',    'Hit daily water goal',            PhosphorIconsFill.drop,        Color(0xFF00B4D8)),
+  'step_starter':   _AchievementDef('Step Starter',      'Logged 1,000+ steps',             PhosphorIconsFill.sneaker,     AppColors.dynamicMint),
+  'mover':          _AchievementDef('Mover',             'Hit 10,000 steps in a day',       PhosphorIconsFill.personSimpleRun, AppColors.dynamicMint),
+  'calorie_logger': _AchievementDef('Calorie Logger',    'Logged your first meal',          PhosphorIconsFill.forkKnife,   AppColors.warning),
+  'goal_crusher':   _AchievementDef('Goal Crusher',      'Hit calorie goal for today',      PhosphorIconsFill.trophy,      AppColors.warning),
+  'sleep_tracker':  _AchievementDef('Sleep Tracker',     'Logged first sleep entry',        PhosphorIconsFill.moon,        AppColors.softIndigo),
+  'well_rested':    _AchievementDef('Well Rested',       'Slept 7+ hours',                  PhosphorIconsFill.moon,        AppColors.softIndigo),
+  'first_workout':  _AchievementDef('First Workout',     'Completed first exercise',        PhosphorIconsFill.barbell,     AppColors.danger),
+  'protein_pro':    _AchievementDef('Protein Pro',       'Hit protein goal for today',      PhosphorIconsFill.egg,         AppColors.danger),
+};
+
+class _AchievementDef {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  const _AchievementDef(this.title, this.subtitle, this.icon, this.color);
+}
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -41,10 +64,65 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger health sync once on mount (best-effort, never blocks UI)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Health sync (best-effort, never blocks UI)
       ref.read(dailyActivityProvider.notifier).syncFromHealth();
+      // Achievement check
+      await _checkAndShowAchievements();
     });
+  }
+
+  /// Evaluates today's stats against achievement conditions.
+  /// Newly unlocked achievements are shown one-by-one as trophy modals.
+  Future<void> _checkAndShowAchievements() async {
+    if (!mounted) return;
+    final today = ref.read(dailyActivityProvider);
+    final user  = ref.read(userProvider);
+    final calorieGoal  = user.calorieGoal;
+    final proteinGoal  = user.proteinGoalG;
+    final waterGoal    = today.waterGoalMl;
+
+    final candidates = <String>[];
+    if (today.waterMl > 0)                                    candidates.add('first_water');
+    if (today.waterMl >= waterGoal)                           candidates.add('hydration_hero');
+    if (today.stepCount >= 1000)                              candidates.add('step_starter');
+    if (today.stepCount >= 10000)                             candidates.add('mover');
+    if (today.caloriesConsumed > 0)                           candidates.add('calorie_logger');
+    if (today.caloriesConsumed >= calorieGoal)                candidates.add('goal_crusher');
+    if (today.sleepMinutes > 0)                               candidates.add('sleep_tracker');
+    if (today.sleepMinutes >= 420)                            candidates.add('well_rested');
+    if (today.caloriesBurned > 0)                             candidates.add('first_workout');
+    if (today.proteinGrams >= proteinGoal)                    candidates.add('protein_pro');
+
+    final newlyUnlocked = await ref.read(userProvider.notifier).unlockAchievements(candidates);
+    if (!mounted) return;
+
+    for (final id in newlyUnlocked) {
+      final def = _kAchievements[id];
+      if (def == null) continue;
+      HapticFeedback.heavyImpact();
+      await _showTrophyModal(def);
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+  }
+
+  Future<void> _showTrophyModal(_AchievementDef def) async {
+    if (!mounted) return;
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Achievement',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 350),
+      transitionBuilder: (ctx, anim, _, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: anim, child: child),
+        );
+      },
+      pageBuilder: (ctx, _, __) => _TrophyModal(def: def),
+    );
   }
 
   @override
@@ -57,7 +135,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Keep 8 PM evening nudge notification synced with today's live data
     ref.watch(eveningNudgeSchedulerProvider);
 
-    return Scaffold(
+    // #44 – is this user's very first session (all stats are zero)?
+    final isAllZero = today.waterMl == 0 &&
+        today.stepCount == 0 &&
+        today.caloriesConsumed == 0 &&
+        today.caloriesBurned == 0 &&
+        today.sleepMinutes == 0 &&
+        today.proteinGrams == 0;
+
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
@@ -179,11 +267,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             delegate: SliverChildListDelegate([
               const SizedBox(height: 12),
 
+              // ── #45 Welcome Banner (first-time only) ──
+              const _WelcomeBanner(),
+
               // ── Active Workout Resume Banner ──
               _ActiveWorkoutBanner(),
 
               // ── Upcoming Habits Banner ──
               const _UpcomingHabitsBanner(),
+
+              // ── #44 First-launch empty state hint ──
+              if (isAllZero) const _FirstLaunchHint(),
 
               // ── Hero Activity Rings ──
               const HeroActivityRings(),
@@ -197,7 +291,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 28),
 
               // ── Water Tracker Card ──
-              _WaterTrackerCard(today: today)
+              _WaterTrackerCard(today: today, isEmpty: isAllZero)
                   .animate()
                   .fadeIn(delay: 200.ms, duration: 400.ms)
                   .slideY(begin: 0.15, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
@@ -205,7 +299,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 16),
 
                 // ── AI Daily Insight Card ──
-                const _AiInsightCard(),
+                _AiInsightCard(isEmpty: isAllZero),
 
                 const SizedBox(height: 16),
 
@@ -229,7 +323,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SizedBox(height: 16),
 
                // ── Bento Grid ──
-               _BentoGrid(today: today, user: user),
+               _BentoGrid(today: today, user: user, isEmpty: isAllZero),
 
                const SizedBox(height: 28),
 
@@ -250,11 +344,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                // ── Health Tools Cards ──
                const _HealthToolsSection(),
 
-               const SizedBox(height: 100),
-            ]),
-          ),
-        ],
-      ),
+                 const SizedBox(height: 100),
+             ]),
+           ),
+         ],
+       ),
+     ),
     );
   }
 
@@ -296,7 +391,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               duration: 400.ms,
               curve: Curves.easeOutBack,
             )
-            .fadeIn(),
+              .fadeIn(),
       ),
     );
   }
@@ -381,7 +476,8 @@ class _LegendDot extends StatelessWidget {
 // ── Water Tracker Card ───────────────────────────────────────────────────────
 class _WaterTrackerCard extends ConsumerWidget {
   final dynamic today;
-  const _WaterTrackerCard({required this.today});
+  final bool isEmpty;
+  const _WaterTrackerCard({required this.today, this.isEmpty = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -442,14 +538,16 @@ class _WaterTrackerCard extends ConsumerWidget {
                               letterSpacing: 1.2,
                               color: const Color(0xFF41C9E2).withOpacity(0.8),
                             )),
-                        Text('Daily Hydration',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.5),
-                            )),
+                        Text(
+                          isEmpty ? 'Start your day hydrated!' : 'Daily Hydration',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isEmpty ? FontWeight.w600 : FontWeight.normal,
+                            color: isEmpty
+                                ? const Color(0xFF41C9E2)
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -709,7 +807,8 @@ class _ActionButtonState extends State<_ActionButton>
 class _BentoGrid extends ConsumerWidget {
   final dynamic today;
   final dynamic user;
-  const _BentoGrid({required this.today, required this.user});
+  final bool isEmpty;
+  const _BentoGrid({required this.today, required this.user, this.isEmpty = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -731,40 +830,52 @@ class _BentoGrid extends ConsumerWidget {
                 ? '—'
                 : (today.sleepMinutes / 60).toStringAsFixed(1),
             unit: today.sleepMinutes == 0 ? '' : 'hrs',
-            subtitle: today.sleepMinutes == 0 ? 'Tap to log' : 'Last night',
+            subtitle: today.sleepMinutes == 0
+                ? (isEmpty ? 'Tap to log sleep' : 'Tap to log')
+                : 'Last night',
             iconData: PhosphorIconsFill.moon,
             gradientColors: [const Color(0xFF6B7AFF), const Color(0xFF9B59B6)],
             progress: (today.sleepMinutes / 480).clamp(0.0, 1.0),
+            isEmpty: isEmpty && today.sleepMinutes == 0,
             onTap: () => _showSleepLogSheet(context, ref),
           ),
            _BentoCard(
               title: 'STEPS',
-              mainValue: '${today.stepCount}',
+              mainValue: today.stepCount == 0 ? '—' : '${today.stepCount}',
               unit: '',
-              subtitle: '/ 10,000 goal',
+              subtitle: today.stepCount == 0
+                  ? (isEmpty ? 'Walk to get started' : '/ 10,000 goal')
+                  : '/ 10,000 goal',
               iconData: PhosphorIconsFill.sneaker,
               gradientColors: [AppColors.dynamicMint, const Color(0xFF00B4D8)],
               progress: (today.stepCount / 10000).clamp(0.0, 1.0),
+              isEmpty: isEmpty && today.stepCount == 0,
               onTap: () => _showStepsDetailSheet(context, ref, today.stepCount),
             ),
           _BentoCard(
             title: 'PROTEIN',
-            mainValue: '${today.proteinGrams}',
-            unit: 'g',
-            subtitle: 'Daily target: ${proteinGoal}g',
+            mainValue: today.proteinGrams == 0 ? '—' : '${today.proteinGrams}',
+            unit: today.proteinGrams == 0 ? '' : 'g',
+            subtitle: today.proteinGrams == 0
+                ? (isEmpty ? 'Log your first meal' : 'Daily target: ${proteinGoal}g')
+                : 'Daily target: ${proteinGoal}g',
             iconData: PhosphorIconsFill.egg,
             gradientColors: [AppColors.danger, const Color(0xFFFF6B35)],
             progress: (today.proteinGrams / proteinGoal).clamp(0.0, 1.0),
+            isEmpty: isEmpty && today.proteinGrams == 0,
             onTap: () => context.push('/nutrition'),
           ),
           _BentoCard(
             title: 'CALORIES IN',
-            mainValue: '${today.caloriesConsumed}',
-            unit: 'kcal',
-            subtitle: 'Goal: $calorieGoal kcal',
+            mainValue: today.caloriesConsumed == 0 ? '—' : '${today.caloriesConsumed}',
+            unit: today.caloriesConsumed == 0 ? '' : 'kcal',
+            subtitle: today.caloriesConsumed == 0
+                ? (isEmpty ? 'Tap to log food' : 'Goal: $calorieGoal kcal')
+                : 'Goal: $calorieGoal kcal',
             iconData: PhosphorIconsFill.forkKnife,
             gradientColors: [AppColors.warning, const Color(0xFFFFD700)],
             progress: (today.caloriesConsumed / calorieGoal).clamp(0.0, 1.0),
+            isEmpty: isEmpty && today.caloriesConsumed == 0,
             onTap: () => context.push('/nutrition'),
           ),
         ]
@@ -790,6 +901,7 @@ class _BentoCard extends StatelessWidget {
   final List<Color> gradientColors;
   final double progress;
   final VoidCallback? onTap;
+  final bool isEmpty;
 
   const _BentoCard({
     required this.title,
@@ -801,6 +913,7 @@ class _BentoCard extends StatelessWidget {
     required this.progress,
     this.colorOverride,
     this.onTap,
+    this.isEmpty = false,
   });
 
   @override
@@ -808,149 +921,135 @@ class _BentoCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = gradientColors.first;
 
-    return GestureDetector(
+    Widget card = GestureDetector(
       onTap: onTap != null ? () {
         HapticFeedback.lightImpact();
         onTap!();
       } : null,
       child: Container(
         padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.charcoalGlass : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Colors.black.withOpacity(0.04),
-        ),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                    color: accent.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8))
-              ]
-            : [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8))
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                        color: accent.withOpacity(0.35),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3))
-                  ],
-                ),
-                child: Icon(iconData, color: Colors.white, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.8,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity(0.45),
-                ),
-              ),
-            ],
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.charcoalGlass : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.black.withOpacity(0.04),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: mainValue,
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
+          boxShadow: isDark
+              ? [BoxShadow(color: accent.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))]
+              : [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    if (unit.isNotEmpty)
-                      TextSpan(
-                        text: ' $unit',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: accent,
-                        ),
-                      ),
-                  ],
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(color: accent.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 3))
+                    ],
+                  ),
+                  child: Icon(iconData, color: Colors.white, size: 16),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(subtitle,
+                const SizedBox(width: 8),
+                Text(
+                  title,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withOpacity(0.4),
-                  )),
-              const SizedBox(height: 10),
-              // Animated mini progress bar
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: progress),
-                duration: 1400.ms,
-                curve: Curves.easeOutCubic,
-                builder: (ctx, v, _) {
-                  return Stack(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
                     children: [
-                      Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: accent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(2),
+                      TextSpan(
+                        text: mainValue,
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                         ),
                       ),
-                      FractionallySizedBox(
-                        widthFactor: v,
-                        child: Container(
+                      if (unit.isNotEmpty)
+                        TextSpan(
+                          text: ' $unit',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: accent,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: 1400.ms,
+                  curve: Curves.easeOutCubic,
+                  builder: (ctx, v, _) {
+                    return Stack(
+                      children: [
+                        Container(
                           height: 4,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                                colors: gradientColors),
+                            color: accent.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                        FractionallySizedBox(
+                          widthFactor: v,
+                          child: Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: gradientColors),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ],
         ),
       ),
     );
+
+    if (isEmpty) {
+      return card
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .shimmer(duration: 1600.ms, color: accent.withOpacity(0.08));
+    }
+    return card;
   }
 }
 
@@ -1156,12 +1255,22 @@ class _HabitRow extends StatelessWidget {
 
 // ── AI Daily Insight Card ─────────────────────────────────────────────────────
 class _AiInsightCard extends ConsumerWidget {
-  const _AiInsightCard();
+  final bool isEmpty;
+  const _AiInsightCard({this.isEmpty = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insightAsync = ref.watch(dailyInsightProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // #44 – show a friendly placeholder if no data logged yet
+    if (isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: _buildEmptyState(context, ref, isDark),
+      ).animate().fadeIn(delay: 400.ms, duration: 400.ms)
+          .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic);
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1172,6 +1281,107 @@ class _AiInsightCard extends ConsumerWidget {
       ),
     ).animate().fadeIn(delay: 400.ms, duration: 400.ms)
         .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic);
+  }
+
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1A1B2E), const Color(0xFF13151F)]
+              : [const Color(0xFFF0F0FF), const Color(0xFFE8EAFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.softIndigo.withOpacity(isDark ? 0.25 : 0.15),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+          ).animate(onPlay: (c) => c.repeat(reverse: true))
+              .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.3)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AI INSIGHT',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: AppColors.softIndigo.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Log your first activity and I\'ll generate a personalised insight just for you.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark
+                        ? Colors.white.withOpacity(0.6)
+                        : AppColors.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(chatPrefilledMessageProvider.notifier).state =
+                        'I\'m just getting started. What should I focus on first for my health?';
+                    context.push('/chat');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.chat_bubble_outline_rounded,
+                            color: Colors.white, size: 13),
+                        SizedBox(width: 5),
+                        Text(
+                          'Ask AI Coach',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCard(BuildContext context, WidgetRef ref, String text, bool isDark) {
@@ -2699,11 +2909,385 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                             ),
                           ],
                         ),
-                        child: const Icon(PhosphorIconsFill.plus,
-                            color: Colors.white, size: 22),
+                          child: const Icon(PhosphorIconsFill.plus,
+                              color: Colors.white, size: 22),
+                        ),
                       ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+// ── #44 First-Launch Hint Banner ─────────────────────────────────────────────
+class _FirstLaunchHint extends StatelessWidget {
+  const _FirstLaunchHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark
+              ? AppColors.softIndigo.withOpacity(0.12)
+              : AppColors.softIndigo.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.softIndigo.withOpacity(isDark ? 0.3 : 0.18),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.softIndigo.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                PhosphorIconsFill.sparkle,
+                size: 18,
+                color: AppColors.softIndigo,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome! Let\'s get started',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.lightTextPrimary,
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Log water, meals, steps or sleep to see your stats come alive.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 500.ms)
+        .slideY(begin: -0.1, end: 0, duration: 500.ms, curve: Curves.easeOutCubic);
+  }
+}
+
+// ── #45 Welcome Banner (first-time only) ─────────────────────────────────────
+class _WelcomeBanner extends StatefulWidget {
+  const _WelcomeBanner();
+
+  @override
+  State<_WelcomeBanner> createState() => _WelcomeBannerState();
+}
+
+class _WelcomeBannerState extends State<_WelcomeBanner>
+    with SingleTickerProviderStateMixin {
+  bool _visible = false;
+  late AnimationController _ctrl;
+  late Animation<Offset> _slide;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _slide = Tween<Offset>(begin: const Offset(0, -0.4), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _checkAndShow();
+  }
+
+  Future<void> _checkAndShow() async {
+    final prefs = await SharedPreferences.getInstance();
+    final seen = prefs.getBool('hasSeenWelcomeBanner') ?? false;
+    if (!seen && mounted) {
+      setState(() => _visible = true);
+      _ctrl.forward();
+      // Auto-dismiss after 8 s
+      Future.delayed(const Duration(seconds: 8), () {
+        if (mounted) _dismiss();
+      });
+    }
+  }
+
+  Future<void> _dismiss() async {
+    await _ctrl.reverse();
+    if (mounted) setState(() => _visible = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenWelcomeBanner', true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_visible) return const SizedBox.shrink();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SlideTransition(
+      position: _slide,
+      child: FadeTransition(
+        opacity: _fade,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E1E3A), const Color(0xFF151528)]
+                    : [const Color(0xFFEEEEFF), const Color(0xFFE2E2FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.softIndigo.withOpacity(isDark ? 0.35 : 0.2),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.softIndigo.withOpacity(0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    PhosphorIconsFill.handWaving,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome to HealthAI!',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Your personal AI health coach is ready. Start by logging today\'s meals, water, and activity.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    _dismiss();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      PhosphorIconsRegular.x,
+                      size: 18,
+                      color: isDark
+                          ? Colors.white.withOpacity(0.4)
+                          : Colors.black.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── #46 Trophy Modal ─────────────────────────────────────────────────────────
+class _TrophyModal extends StatefulWidget {
+  final _AchievementDef def;
+  const _TrophyModal({required this.def});
+
+  @override
+  State<_TrophyModal> createState() => _TrophyModalState();
+}
+
+class _TrophyModalState extends State<_TrophyModal> {
+  @override
+  void initState() {
+    super.initState();
+    // Auto-close after 2.5 s
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final def = widget.def;
+
+    return Center(
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1B2E) : Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(
+                color: def.color.withOpacity(isDark ? 0.4 : 0.25),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: def.color.withOpacity(0.25),
+                  blurRadius: 40,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Glowing trophy icon
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [def.color, def.color.withOpacity(0.6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: def.color.withOpacity(0.5),
+                        blurRadius: 24,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Icon(def.icon, color: Colors.white, size: 36),
+                )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .shimmer(duration: 1200.ms, color: Colors.white.withOpacity(0.35))
+                    .scale(
+                      begin: const Offset(1.0, 1.0),
+                      end: const Offset(1.06, 1.06),
+                      duration: 800.ms,
+                      curve: Curves.easeInOut,
+                    ),
+                const SizedBox(height: 20),
+                // "Achievement Unlocked" badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: def.color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: def.color.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(PhosphorIconsFill.trophy, color: def.color, size: 13),
+                      const SizedBox(width: 5),
+                      Text(
+                        'ACHIEVEMENT UNLOCKED',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          color: def.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  def.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  def.subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Tap anywhere to continue',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark
+                        ? Colors.white.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.3),
+                  ),
                 ),
               ],
             ),
