@@ -15,6 +15,8 @@ import '../database/models/chat_session_doc.dart';
 import '../database/models/fasting_doc.dart';
 import '../database/models/body_entry_doc.dart';
 import '../database/models/supplement_doc.dart';
+import '../database/models/meal_plan_doc.dart';
+import '../database/models/nutrition_log_doc.dart';
 
 final isarProvider = Provider<Isar>((ref) {
   throw UnimplementedError('Isar is not initialized yet');
@@ -34,6 +36,8 @@ const _schemas = [
   BodyEntryDocSchema,
   SupplementDocSchema,
   SupplementLogDocSchema,
+  MealPlanDocSchema,
+  NutritionLogDocSchema,
 ];
 
 class LocalDBService {

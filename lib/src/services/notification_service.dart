@@ -28,22 +28,20 @@ final eveningNudgeSchedulerProvider = Provider<void>((ref) {
   final user = ref.watch(userProvider);
   final isar = ref.read(isarProvider);
 
-  // Check if there's a workout logged today
   final today = DateTime.now();
   final todayMidnight = DateTime(today.year, today.month, today.day);
-    final hadWorkout = isar.workoutDocs
-        .where()
-        .filter()
-        .dateBetween(todayMidnight, todayMidnight.add(const Duration(days: 1)))
-        .limit(1)
-        .findAllSync()
-        .isNotEmpty;
+  final hadWorkout = isar.workoutDocs
+      .where()
+      .filter()
+      .dateBetween(todayMidnight, todayMidnight.add(const Duration(days: 1)))
+      .limit(1)
+      .findAllSync()
+      .isNotEmpty;
 
   final notifier = ref.read(habitsProvider.notifier);
   final completedToday = notifier.todayCompleted.length;
   final calGoal = user.calorieGoal > 0 ? user.calorieGoal : 2000;
 
-  // Fire-and-forget; errors are swallowed since this is best-effort.
   NotificationService.instance.scheduleEveningNudge(
     completedHabits: completedToday,
     totalHabits: habits.length,
@@ -79,7 +77,6 @@ class _PrefKey {
 class NotificationService {
   NotificationService._();
 
-  /// Singleton instance for use outside of Riverpod (e.g. main.dart).
   static final NotificationService instance = NotificationService._();
 
   final FlutterLocalNotificationsPlugin _plugin =
@@ -87,7 +84,6 @@ class NotificationService {
 
   bool _initialized = false;
 
-  /// Initialise the plugin + timezone data. Call once from `main()`.
   Future<void> init() async {
     if (_initialized) return;
     tz.initializeTimeZones();
@@ -99,17 +95,16 @@ class NotificationService {
       requestSoundPermission: false,
     );
 
-    await _plugin.initialize(
-      const InitializationSettings(android: androidInit, iOS: iosInit),
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
+      await _plugin.initialize(
+        const InitializationSettings(android: androidInit, iOS: iosInit),
+        onDidReceiveNotificationResponse: _onNotificationTap,
+      );
 
     _initialized = true;
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // Navigate to chat on tap — handled via shared_preferences flag so router
-    // can react on next build cycle without needing a BuildContext here.
+    // Navigate on tap — handled via shared_preferences flag.
   }
 
   // ── Permission request ────────────────────────────────────────────────────
@@ -140,7 +135,7 @@ class NotificationService {
     return true;
   }
 
-  // ── Channel helper ────────────────────────────────────────────────────────
+  // ── Notification detail presets ───────────────────────────────────────────
 
   static const _dailyChannel = AndroidNotificationDetails(
     'healthai_daily',
@@ -171,26 +166,26 @@ class NotificationService {
     styleInformation: BigTextStyleInformation(''),
   );
 
-  NotificationDetails get _dailyDetails => NotificationDetails(
+  NotificationDetails get _dailyDetails => const NotificationDetails(
         android: _dailyChannel,
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
         ),
       );
 
-  NotificationDetails get _reminderDetails => NotificationDetails(
+  NotificationDetails get _reminderDetails => const NotificationDetails(
         android: _reminderChannel,
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentSound: true,
         ),
       );
 
-  NotificationDetails get _weeklyDetails => NotificationDetails(
+  NotificationDetails get _weeklyDetails => const NotificationDetails(
         android: _weeklyChannel,
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -213,13 +208,13 @@ class NotificationService {
   // ── Morning motivation ────────────────────────────────────────────────────
 
   static const List<String> _morningMessages = [
-    "Good morning! 🌅 Ready to crush today's goals? Your AI coach is here.",
-    "Rise and shine! 💪 Let's check your progress and plan a great day.",
-    "Morning check-in time! 🏃 How are you feeling today? Open your coach.",
-    "New day, new goals! ✨ Your personalized health plan is waiting for you.",
-    "Good morning! Your streak is on the line — let's keep it going! 🔥",
-    "Fuel up and move! 🥗 Your AI coach has today's nutrition tips ready.",
-    "Morning! 😴 Track your sleep and energy to unlock today's workout plan.",
+    "Good morning! Ready to crush today's goals? Your AI coach is here.",
+    "Rise and shine! Let's check your progress and plan a great day.",
+    "Morning check-in time! How are you feeling today? Open your coach.",
+    "New day, new goals! Your personalized health plan is waiting for you.",
+    "Good morning! Your streak is on the line — let's keep it going!",
+    "Fuel up and move! Your AI coach has today's nutrition tips ready.",
+    "Morning! Track your sleep and energy to unlock today's workout plan.",
     "Another day, another step closer to your goal! Open HealthAI to stay on track.",
   ];
 
@@ -232,16 +227,17 @@ class NotificationService {
     final msgIndex = DateTime.now().day % _morningMessages.length;
     final msg = _morningMessages[msgIndex];
 
-    await _plugin.zonedSchedule(
-      _NotifId.morningMotivation,
-      '☀️ HealthAI Morning Check-in',
-      msg,
-      _nextInstanceOfTime(hour, minute),
-      _dailyDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      await _plugin.zonedSchedule(
+        _NotifId.morningMotivation,
+        'HealthAI Morning Check-in',
+        msg,
+        _nextInstanceOfTime(hour, minute),
+        _dailyDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
   }
 
   // ── Habit reminder ────────────────────────────────────────────────────────
@@ -251,52 +247,54 @@ class NotificationService {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(_PrefKey.habitReminderEnabled) ?? true)) return;
 
-    await _plugin.zonedSchedule(
-      _NotifId.habitReminder,
-      '📋 Habit Check-in',
-      "Don't forget to log today's habits before bed — keep that streak alive!",
-      _nextInstanceOfTime(hour, minute),
-      _reminderDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      await _plugin.zonedSchedule(
+        _NotifId.habitReminder,
+        'Habit Check-in',
+        "Don't forget to log today's habits before bed — keep that streak alive!",
+        _nextInstanceOfTime(hour, minute),
+        _reminderDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
   }
 
   // ── Water reminder ────────────────────────────────────────────────────────
 
   Future<void> scheduleWaterReminders() async {
-    // Cancel all existing water reminders
     for (int i = 0; i < 6; i++) {
       await _plugin.cancel(_NotifId.waterReminder + i);
     }
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(_PrefKey.waterReminderEnabled) ?? false)) return;
 
-    // Remind every 2 hours between 9am and 7pm
     final times = [9, 11, 13, 15, 17, 19];
     for (int i = 0; i < times.length; i++) {
-      await _plugin.zonedSchedule(
-        _NotifId.waterReminder + i,
-        '💧 Hydration Reminder',
-        'Time to drink a glass of water! Stay hydrated for peak performance.',
-        _nextInstanceOfTime(times[i], 0),
-        _reminderDetails,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
+        await _plugin.zonedSchedule(
+          _NotifId.waterReminder + i,
+          'Hydration Reminder',
+          'Time to drink a glass of water! Stay hydrated for peak performance.',
+          _nextInstanceOfTime(times[i], 0),
+          _reminderDetails,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
     }
   }
 
   // ── Weekly report ─────────────────────────────────────────────────────────
 
-  Future<void> scheduleWeeklyReport({int weekday = DateTime.sunday, int hour = 9, int minute = 0}) async {
+  Future<void> scheduleWeeklyReport(
+      {int weekday = DateTime.sunday,
+      int hour = 9,
+      int minute = 0}) async {
     await _plugin.cancel(_NotifId.weeklyReport);
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(_PrefKey.weeklyReportEnabled) ?? true)) return;
 
-    // Find next occurrence of the given weekday
     final now = tz.TZDateTime.now(tz.local);
     int daysUntil = (weekday - now.weekday).toInt();
     if (daysUntil <= 0) daysUntil += 7;
@@ -310,16 +308,17 @@ class NotificationService {
       minute,
     );
 
-    await _plugin.zonedSchedule(
-      _NotifId.weeklyReport,
-      '📊 Your Weekly Health Report is Ready!',
-      'AI has analyzed your week. Tap to see your report card, highlights, and next week\'s focus.',
-      scheduled,
-      _weeklyDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-    );
+      await _plugin.zonedSchedule(
+        _NotifId.weeklyReport,
+        'Your Weekly Health Report is Ready!',
+        "AI has analyzed your week. Tap to see your report card, highlights, and next week's focus.",
+        scheduled,
+        _weeklyDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
   }
 
   // ── Workout reminder ──────────────────────────────────────────────────────
@@ -332,28 +331,20 @@ class NotificationService {
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
 
-    await _plugin.zonedSchedule(
-      _NotifId.workoutReminder,
-      '🏋️ Workout Reminder',
-      "Time for $workoutName! Your AI coach is ready to guide you through it.",
-      tzTime,
-      _reminderDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-    );
+      await _plugin.zonedSchedule(
+        _NotifId.workoutReminder,
+        'Workout Reminder',
+        "Time for $workoutName! Your AI coach is ready to guide you through it.",
+        tzTime,
+        _reminderDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
   }
 
   // ── Evening proactive nudge (8 PM) ───────────────────────────────────────
 
-  /// Schedules (or reschedules) a personalised 8 PM evening nudge.
-  ///
-  /// Call this once after the app has today's data (e.g. when the daily
-  /// activity provider updates), passing in the current runtime values.
-  /// The notification fires at 20:00 local time and repeats daily.
-  ///
-  /// [completedHabits] / [totalHabits] — today's habit counts
-  /// [caloriesConsumed] / [calorieGoal]  — today's nutrition
-  /// [hadWorkoutToday]                   — whether a workout was logged
   Future<void> scheduleEveningNudge({
     int completedHabits = 0,
     int totalHabits = 0,
@@ -365,28 +356,25 @@ class NotificationService {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(_PrefKey.notificationsEnabled) ?? true)) return;
 
-    // Build a personalised message from the three signals
     final parts = <String>[];
 
-    // Habit signal
     if (totalHabits > 0) {
       if (completedHabits == totalHabits) {
-        parts.add('All $totalHabits habits done today — amazing! 🔥');
+        parts.add('All $totalHabits habits done today — amazing!');
       } else {
         final remaining = totalHabits - completedHabits;
-        parts.add('$remaining habit${remaining > 1 ? 's' : ''} still to go — keep the streak alive!');
+        parts.add(
+            '$remaining habit${remaining > 1 ? 's' : ''} still to go — keep the streak alive!');
       }
     }
 
-    // Calorie signal
     final calRemaining = calorieGoal - caloriesConsumed;
     if (caloriesConsumed > 0 && calRemaining > 200) {
-      parts.add('You\'re ${calRemaining} kcal under your goal — grab a snack.');
+      parts.add('You\'re $calRemaining kcal under your goal — grab a snack.');
     } else if (caloriesConsumed > 0 && calRemaining < -200) {
       parts.add('You\'re ${-calRemaining} kcal over today — lighter dinner?');
     }
 
-    // Workout signal
     if (!hadWorkoutToday) {
       parts.add('No workout logged yet — even a 15-min walk counts!');
     }
@@ -395,27 +383,25 @@ class NotificationService {
         ? 'Check in with your AI coach to review today\'s progress.'
         : parts.join(' ');
 
-    await _plugin.zonedSchedule(
-      _NotifId.eveningNudge,
-      '🌙 Evening Health Check-in',
-      body,
-      _nextInstanceOfTime(20, 0),
-      _dailyDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      await _plugin.zonedSchedule(
+        _NotifId.eveningNudge,
+        'Evening Health Check-in',
+        body,
+        _nextInstanceOfTime(20, 0),
+        _dailyDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
   }
 
   // ── Schedule all defaults ─────────────────────────────────────────────────
 
-  /// Call this after init() to set up all default daily notifications.
   Future<void> scheduleAllDefaults() async {
     await scheduleMorningMotivation(hour: 8, minute: 0);
     await scheduleHabitReminder(hour: 20, minute: 0);
     await scheduleWeeklyReport();
-    // Water reminders are opt-in, skip by default
   }
 
   // ── Cancel all ────────────────────────────────────────────────────────────
@@ -503,14 +489,14 @@ class NotificationService {
     }
   }
 
-  // ── Immediate (test) notification ─────────────────────────────────────────
+  // ── Test notification ─────────────────────────────────────────────────────
 
   Future<void> showTestNotification() async {
-    await _plugin.show(
-      9999,
-      '✅ Notifications are working!',
-      'HealthAI will now send you daily motivation and health reminders.',
-      _dailyDetails,
-    );
+      await _plugin.show(
+        9999,
+        'Notifications are working!',
+        'HealthAI will now send you daily motivation and health reminders.',
+        _dailyDetails,
+      );
   }
 }

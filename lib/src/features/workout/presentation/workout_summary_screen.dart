@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../domain/workout_session_data.dart';
 
 class WorkoutSummaryScreen extends StatelessWidget {
@@ -80,7 +81,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                   // ── Back button ────────────────────────────────────────────
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: GestureDetector(
+                    child: AppAnimatedPressable(
                       onTap: () {
                           HapticFeedback.lightImpact();
                           context.go('/dashboard');

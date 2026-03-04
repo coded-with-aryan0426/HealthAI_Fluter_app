@@ -6,10 +6,27 @@ import '../database/models/daily_log_doc.dart';
 import '../database/models/workout_doc.dart';
 import '../database/models/meal_doc.dart';
 import '../database/models/habit_doc.dart';
+import '../database/models/user_doc.dart';
+import 'pdf_report_service.dart';
 
-/// Exports Isar data to CSV files and shares them via the native share sheet.
+/// Exports Isar data as PDF or CSV and shares via the native share sheet.
 class DataExportService {
   const DataExportService._();
+
+  // ── PDF export (primary) ──────────────────────────────────────────────────
+
+  static Future<void> exportPdfAndShare(Isar isar, UserDoc user) async {
+    final now  = DateTime.now();
+    final file = await PdfReportService.generate(isar: isar, user: user);
+
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/pdf')],
+      subject: 'HealthAI — Health Report',
+      text: 'Your HealthAI health report generated on ${_formatDate(now)}.',
+    );
+  }
+
+  // ── CSV export (legacy, kept for reference) ───────────────────────────────
 
   static Future<void> exportAndShare(Isar isar) async {
     final now = DateTime.now();
@@ -27,9 +44,8 @@ class DataExportService {
     await Share.shareXFiles(
       xFiles,
       subject: 'HealthAI — Health Data Export (last 30 days)',
-      text:
-          'Your HealthAI health data exported on ${_formatDate(now)}.\n'
-          'Includes: daily logs, workouts, meals, and habits.',
+      text: 'Your HealthAI health data exported on ${_formatDate(now)}.\n'
+            'Includes: daily logs, workouts, meals, and habits.',
     );
   }
 

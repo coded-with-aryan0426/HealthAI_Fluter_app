@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>HealthAI needs access to your camera to scan meals and provide dietary analysis.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>HealthAI uses motion data to count your steps and track daily activity accurately.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>HealthAI reads your steps, sleep, and activity data to personalize your health insights.</string>
 	<key>NSHealthUpdateUsageDescription</key>

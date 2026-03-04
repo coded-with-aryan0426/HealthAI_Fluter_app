@@ -101,13 +101,13 @@ class _AnimatedInfinityLogoState extends State<AnimatedInfinityLogo>
               boxShadow: [
                 BoxShadow(
                   color: mintColor
-                      .withOpacity(0.18 + _glowAnim.value * 0.28),
+                      .withValues(alpha: 0.18 + _glowAnim.value * 0.28),
                   blurRadius: 24 + _glowAnim.value * 24,
                   spreadRadius: 2 + _glowAnim.value * 4,
                 ),
               ],
               border: Border.all(
-                color: mintColor.withOpacity(0.08 + _glowAnim.value * 0.12),
+                color: mintColor.withValues(alpha: 0.08 + _glowAnim.value * 0.12),
                 width: 1.2,
               ),
             ),
@@ -189,7 +189,7 @@ class _InfinityPainter extends CustomPainter {
 
     // ── 1. Dim base path (full, always visible) ─────────────────────────
     final basePaint = Paint()
-      ..color = _mintDim.withOpacity(isDark ? 0.25 : 0.15)
+      ..color = _mintDim.withValues(alpha: isDark ? 0.25 : 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = size.width * 0.040
       ..strokeCap = StrokeCap.round;
@@ -204,7 +204,7 @@ class _InfinityPainter extends CustomPainter {
 
         // Outer glow
         final glowPaint = Paint()
-          ..color = _mint.withOpacity(0.18 + glowIntensity * 0.22)
+          ..color = _mint.withValues(alpha: 0.18 + glowIntensity * 0.22)
           ..style = PaintingStyle.stroke
           ..strokeWidth = size.width * 0.095
           ..strokeCap = StrokeCap.round
@@ -215,7 +215,7 @@ class _InfinityPainter extends CustomPainter {
         final strokePaint = Paint()
           ..shader = LinearGradient(
             colors: [
-              _mint.withOpacity(0.6),
+              _mint.withValues(alpha: 0.6),
               _mint,
               const Color(0xFF41C9E2),
               _mint,
@@ -239,13 +239,13 @@ class _InfinityPainter extends CustomPainter {
 
       // Outer halo
       final haloPaint = Paint()
-        ..color = _mint.withOpacity(0.35 + glowIntensity * 0.25)
+        ..color = _mint.withValues(alpha: 0.35 + glowIntensity * 0.25)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
       canvas.drawCircle(sparkPos, size.width * 0.065, haloPaint);
 
       // Inner bright dot
       final dotPaint = Paint()
-        ..color = Colors.white.withOpacity(0.92)
+        ..color = Colors.white.withValues(alpha: 0.92)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(sparkPos, size.width * 0.028, dotPaint);
 
@@ -260,8 +260,8 @@ class _InfinityPainter extends CustomPainter {
           final trailPaint = Paint()
             ..shader = LinearGradient(
               colors: [
-                _mint.withOpacity(0.0),
-                _mint.withOpacity(0.55),
+                _mint.withValues(alpha: 0.0),
+                _mint.withValues(alpha: 0.55),
               ],
             ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
             ..style = PaintingStyle.stroke
@@ -276,12 +276,12 @@ class _InfinityPainter extends CustomPainter {
     if (progress > 0.4) {
       final dotOpacity = ((progress - 0.4) / 0.6).clamp(0.0, 1.0);
       final centerGlow = Paint()
-        ..color = _mint.withOpacity(0.55 * dotOpacity * (0.7 + glowIntensity * 0.3))
+        ..color = _mint.withValues(alpha: 0.55 * dotOpacity * (0.7 + glowIntensity * 0.3))
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
       canvas.drawCircle(Offset(cx, cy), size.width * 0.05, centerGlow);
 
       final centerDot = Paint()
-        ..color = _mint.withOpacity(dotOpacity)
+        ..color = _mint.withValues(alpha: dotOpacity)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(cx, cy), size.width * 0.022, centerDot);
     }

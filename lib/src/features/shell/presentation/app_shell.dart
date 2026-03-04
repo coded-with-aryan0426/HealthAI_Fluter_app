@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
@@ -20,42 +22,79 @@ class AppShell extends StatelessWidget {
   }
 
   Future<void> _onBack(BuildContext context) async {
-    // Not on Dashboard tab → go to Dashboard first
     if (navigationShell.currentIndex != 0) {
       HapticFeedback.lightImpact();
       navigationShell.goBranch(0, initialLocation: true);
       return;
     }
-    // Already on Dashboard → ask user to confirm exit
-    final shouldExit = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Exit App?'),
-        content: const Text('Are you sure you want to exit HealthAI?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Exit',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (shouldExit == true) {
-      // Pop the root navigator to exit
-      if (context.mounted) SystemNavigator.pop();
+    final shouldExit = await _showExitSheet(context);
+    if (shouldExit == true && context.mounted) {
+      SystemNavigator.pop();
     }
   }
 
+  Future<bool?> _showExitSheet(BuildContext context) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Icon(PhosphorIconsFill.doorOpen,
+                    size: 42,
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                const SizedBox(height: 14),
+                Text('Exit HealthAI?',
+                    style: Theme.of(ctx).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Text(
+                  'Your progress is saved. See you next time!',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Stay'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppGradientButton(
+                        label: 'Exit',
+                        gradientColors: [AppColors.danger, AppColors.dangerDark],
+                        onTap: () => Navigator.of(ctx).pop(true),
+                        height: 50,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -66,8 +105,11 @@ class AppShell extends StatelessWidget {
         extendBody: true,
         body: navigationShell,
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        floatingActionButton: const _GradientScannerFab(),
-        bottomNavigationBar: _GlassNavBar(
+        floatingActionButton: Transform.translate(
+          offset: const Offset(0, 19), // Perfectly aligns the text vertically
+          child: const _AiCoachFab(),
+        ),
+        bottomNavigationBar: _CurvedNavBar(
           currentIndex: navigationShell.currentIndex,
           onTap: (i) => _onTap(context, i),
         ),
@@ -76,12 +118,13 @@ class AppShell extends StatelessWidget {
   }
 }
 
-// ── Glass Nav Bar ─────────────────────────────────────────────────────────────
-class _GlassNavBar extends StatelessWidget {
+// ── Curved Notched Nav Bar ─────────────────────────────────────────────────────
+
+class _CurvedNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _GlassNavBar({
+  const _CurvedNavBar({
     required this.currentIndex,
     required this.onTap,
   });
@@ -89,37 +132,46 @@ class _GlassNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark
+        ? AppColors.deepObsidian.withValues(alpha: 0.96)
+        : Colors.white.withValues(alpha: 0.97);
 
-    return ClipRect(
+    return ClipPath(
+      clipper: _NavBarClipper(),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
         child: Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.deepObsidian.withOpacity(0.88)
-                : Colors.white.withOpacity(0.88),
-            border: Border(
-              top: BorderSide(
-                color: isDark
-                    ? Colors.white.withOpacity(0.06)
-                    : Colors.black.withOpacity(0.05),
-                width: 0.5,
+            color: bgColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.10),
+                blurRadius: 24,
+                offset: const Offset(0, -4),
               ),
-            ),
+            ],
           ),
           child: SafeArea(
             top: false,
             child: SizedBox(
-              height: 64,
-              child: Row(
-                  children: [
-                      // Left side: Dashboard + Workout
+              height: 72,
+              child: Stack(
+                children: [
+                  // Top border line with gap in center
+                  CustomPaint(
+                    size: Size(MediaQuery.of(context).size.width, 72),
+                    painter: _NavBorderPainter(isDark: isDark),
+                  ),
+                  // Nav items row
+                  Row(
+                    children: [
+                      // Left two items
                       _NavItem(
                         index: 0,
                         currentIndex: currentIndex,
                         iconRegular: PhosphorIconsRegular.house,
                         iconFill: PhosphorIconsFill.house,
-                        label: 'Dashboard',
+                        label: 'Home',
                         onTap: () => onTap(0),
                       ),
                       _NavItem(
@@ -130,9 +182,9 @@ class _GlassNavBar extends StatelessWidget {
                         label: 'Workout',
                         onTap: () => onTap(1),
                       ),
-                      // FAB spacer
-                      const SizedBox(width: 76),
-                      // Right side: Habits + Nutrition
+                      // Center gap for FAB — 88px wide
+                      const SizedBox(width: 88),
+                      // Right two items
                       _NavItem(
                         index: 2,
                         currentIndex: currentIndex,
@@ -144,12 +196,14 @@ class _GlassNavBar extends StatelessWidget {
                       _NavItem(
                         index: 3,
                         currentIndex: currentIndex,
-                        iconRegular: PhosphorIconsRegular.bowlFood,
-                        iconFill: PhosphorIconsFill.bowlFood,
+                        iconRegular: PhosphorIconsRegular.forkKnife,
+                        iconFill: PhosphorIconsFill.forkKnife,
                         label: 'Nutrition',
                         onTap: () => onTap(3),
                       ),
-                  ],
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -158,6 +212,65 @@ class _GlassNavBar extends StatelessWidget {
     );
   }
 }
+
+/// Clips the nav bar into a curved shape with a center notch for the FAB.
+class _NavBarClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    // FAB geometry logic:
+    // Without translations, centerDocked places the widget's center at y = 0.
+    // The FAB widget is 84px tall, so its y goes from -42 to 42.
+    // The top circle is 68px tall, making the circle itself center at y = -8.
+    // We translated it by +19, giving the circle a final center at y = 11.
+    // We want a gap around the 34px radius circle, so we use radius 40.
+    final guestRect = Rect.fromCircle(
+      center: Offset(size.width / 2, 11),
+      radius: 40,
+    );
+    return const CircularNotchedRectangle().getOuterPath(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      guestRect,
+    );
+  }
+
+  @override
+  bool shouldReclip(_NavBarClipper old) => false;
+}
+
+/// Paints the top border line with a gap under the notch.
+class _NavBorderPainter extends CustomPainter {
+  final bool isDark;
+  const _NavBorderPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    final guestRect = Rect.fromCircle(
+      center: Offset(size.width / 2, 11),
+      radius: 40,
+    );
+    final path = const CircularNotchedRectangle().getOuterPath(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      guestRect,
+    );
+
+    canvas.save();
+    // Clip vertically so we only ever draw the top line + notch, 
+    // avoiding the left, right, and bottom edges of the screen.
+    canvas.clipRect(Rect.fromLTWH(-10, -10, size.width + 20, 60));
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_NavBorderPainter old) => old.isDark != isDark;
+}
+
+// ── Nav Item (standard) ───────────────────────────────────────────────────────
 
 class _NavItem extends StatefulWidget {
   final int index;
@@ -180,18 +293,16 @@ class _NavItem extends StatefulWidget {
   State<_NavItem> createState() => _NavItemState();
 }
 
-class _NavItemState extends State<_NavItem>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scaleAnim;
+class _NavItemState extends State<_NavItem> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: 150.ms);
-    _scaleAnim =
-        Tween<double>(begin: 1.0, end: 0.85).animate(
-            CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+    _ctrl = AnimationController(vsync: this, duration: 130.ms);
+    _scaleAnim = Tween<double>(begin: 1.0, end: 0.82)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -204,7 +315,6 @@ class _NavItemState extends State<_NavItem>
   Widget build(BuildContext context) {
     final isSelected = widget.index == widget.currentIndex;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = AppColors.dynamicMint;
     final inactiveColor =
         isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary;
 
@@ -221,46 +331,66 @@ class _NavItemState extends State<_NavItem>
           scale: _scaleAnim,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
             children: [
-              // Icon area – fixed 32px height always
               SizedBox(
-                height: 32,
+                height: 34,
                 child: AnimatedSwitcher(
-                  duration: 200.ms,
+                  duration: 220.ms,
+                  transitionBuilder: (child, anim) => ScaleTransition(
+                    scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
                   child: isSelected
                       ? Container(
-                          key: const ValueKey('pill'),
-                          width: 44,
-                          height: 28,
+                          key: const ValueKey('active'),
+                          height: 30,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           decoration: BoxDecoration(
-                            color: activeColor.withOpacity(0.13),
-                            borderRadius: BorderRadius.circular(10),
+                            gradient: const LinearGradient(
+                              colors: [
+                                AppColors.dynamicMint,
+                                AppColors.softIndigo,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.dynamicMint.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
                           ),
-                          child: Icon(widget.iconFill,
-                              color: activeColor, size: 18),
+                          // ShaderMask applies a gradient to the icon inside the pill
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [Colors.white, Colors.white],
+                            ).createShader(bounds),
+                            child: Icon(widget.iconFill, color: Colors.white, size: 18),
+                          ),
                         )
-                      : Icon(
-                          key: const ValueKey('icon'),
-                          widget.iconRegular,
-                          color: inactiveColor,
-                          size: 22,
+                      : Padding(
+                          key: const ValueKey('inactive'),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Icon(widget.iconRegular,
+                              color: inactiveColor, size: 22),
                         ),
                 ),
               ),
-              // Label – fixed 14px height always
-              SizedBox(
-                height: 14,
-                child: AnimatedDefaultTextStyle(
-                  duration: 200.ms,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? activeColor : inactiveColor,
-                  ),
-                  child: Text(widget.label),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: 200.ms,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? AppColors.dynamicMint
+                      : inactiveColor,
+                  letterSpacing: 0.2,
                 ),
+                child: Text(widget.label),
               ),
             ],
           ),
@@ -270,46 +400,35 @@ class _NavItemState extends State<_NavItem>
   }
 }
 
-// ── Gradient Scanner FAB ─────────────────────────────────────────────────────
-class _GradientScannerFab extends StatefulWidget {
-  const _GradientScannerFab();
+// ── AI Coach FAB ──────────────────────────────────────────────────────────────
+class _AiCoachFab extends StatefulWidget {
+  const _AiCoachFab();
 
   @override
-  State<_GradientScannerFab> createState() => _GradientScannerFabState();
+  State<_AiCoachFab> createState() => _AiCoachFabState();
 }
 
-class _GradientScannerFabState extends State<_GradientScannerFab>
+class _AiCoachFabState extends State<_AiCoachFab>
     with TickerProviderStateMixin {
-  late AnimationController _pulseCtrl;
-  late AnimationController _rotateCtrl;
-  late AnimationController _scanCtrl;
-  late Animation<double> _scanLineAnim;
+  late final AnimationController _pulseCtrl;
+  late final AnimationController _rotateCtrl;
   bool _pressed = false;
 
   @override
   void initState() {
     super.initState();
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2000))
-      ..repeat(reverse: false);
-
-    _rotateCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 4))
+        vsync: this, duration: const Duration(milliseconds: 2400))
       ..repeat();
-
-    _scanCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1600))
-      ..repeat(reverse: true);
-    _scanLineAnim = Tween<double>(begin: -1.0, end: 1.0).animate(
-      CurvedAnimation(parent: _scanCtrl, curve: Curves.easeInOut),
-    );
+    _rotateCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 6))
+      ..repeat();
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
     _rotateCtrl.dispose();
-    _scanCtrl.dispose();
     super.dispose();
   }
 
@@ -320,156 +439,132 @@ class _GradientScannerFabState extends State<_GradientScannerFab>
       onTapUp: (_) {
         setState(() => _pressed = false);
         HapticFeedback.mediumImpact();
-        context.push('/scanner');
+        context.push('/chat');
       },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
-        scale: _pressed ? 0.88 : 1.0,
+        scale: _pressed ? 0.87 : 1.0,
         duration: 120.ms,
-        child: SizedBox(
-          width: 68,
-          height: 68,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Outer pulse ring
-              AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (_, __) {
-                  final scale = 1.0 + _pulseCtrl.value * 0.5;
-                  final opacity = (1.0 - _pulseCtrl.value).clamp(0.0, 1.0);
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.dynamicMint.withOpacity(opacity * 0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              // Spinning gradient ring
-              AnimatedBuilder(
-                animation: _rotateCtrl,
-                builder: (_, __) => Transform.rotate(
-                  angle: _rotateCtrl.value * 2 * math.pi,
-                  child: CustomPaint(
-                    size: const Size(68, 68),
-                    painter: _GradientRingPainter(),
-                  ),
-                ),
-              ),
-
-              // Main button body
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1E1E2E), Color(0xFF0E0E1A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.dynamicMint.withOpacity(0.3),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 8,
-                      spreadRadius: -2,
-                    ),
-                  ],
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
-                ),
-                child: ClipOval(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Corner reticle marks
-                      const Icon(PhosphorIconsRegular.cornersOut,
-                          color: Colors.white, size: 32),
-
-                      // Inner QR icon
-                      const Icon(PhosphorIconsFill.qrCode,
-                          color: Colors.white, size: 20),
-
-                      // Animated scan line
-                      AnimatedBuilder(
-                        animation: _scanLineAnim,
-                        builder: (_, __) {
-                          return Transform.translate(
-                            offset: Offset(0, _scanLineAnim.value * 12),
-                            child: Container(
-                              width: 28,
-                              height: 1.5,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.transparent,
-                                    AppColors.dynamicMint,
-                                    Colors.transparent,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        AppColors.dynamicMint.withOpacity(0.8),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
+        curve: Curves.easeInOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 68,
+              height: 68,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer pulse ring
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (_, __) {
+                      final t = _pulseCtrl.value;
+                      final scale = 1.0 + t * 0.50;
+                      final opacity = (1.0 - t).clamp(0.0, 1.0);
+                      return Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 68,
+                          height: 68,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.softIndigo.withValues(alpha: opacity * 0.45),
+                              width: 1.5,
                             ),
-                          );
-                        },
-                      ),
-                    ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ),
+
+                  // Spinning gradient ring
+                  AnimatedBuilder(
+                    animation: _rotateCtrl,
+                    builder: (_, __) => Transform.rotate(
+                      angle: _rotateCtrl.value * 2 * math.pi,
+                      child: CustomPaint(
+                        size: const Size(68, 68),
+                        painter: _AiRingPainter(),
+                      ),
+                    ),
+                  ),
+
+                  // Main button body
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [AppColors.softIndigo, Color(0xFF6B21A8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.softIndigo.withValues(alpha: 0.50),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          spreadRadius: -2,
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      PhosphorIconsFill.sparkle,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'AI Coach',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _GradientRingPainter extends CustomPainter {
+class _AiRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromCircle(
       center: Offset(size.width / 2, size.height / 2),
       radius: size.width / 2 - 1,
     );
-
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..shader = SweepGradient(
         colors: [
           Colors.transparent,
-          AppColors.dynamicMint.withOpacity(0.6),
-          AppColors.softIndigo,
+          AppColors.softIndigo.withValues(alpha: 0.8),
+          AppColors.dynamicMint,
           Colors.transparent,
         ],
-        stops: const [0.0, 0.4, 0.7, 1.0],
+        stops: const [0.0, 0.35, 0.65, 1.0],
       ).createShader(rect);
-
     canvas.drawArc(rect, 0, math.pi * 2, false, paint);
   }
 

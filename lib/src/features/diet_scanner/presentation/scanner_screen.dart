@@ -261,7 +261,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 gradient: RadialGradient(
                   center: Alignment.center,
                   radius: 0.85,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
                 ),
               ),
             ),
@@ -273,7 +273,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child:
-                    Container(color: Colors.black.withOpacity(0.2)),
+                    Container(color: Colors.black.withValues(alpha: 0.2)),
               ),
             ).animate().fadeIn(duration: 300.ms),
 
@@ -324,7 +324,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+            colors: [Colors.black.withValues(alpha: 0.85), Colors.transparent],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -377,9 +377,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         child: Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.55),
+            color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.white.withOpacity(0.12)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -409,7 +409,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Widget _buildBadge(BuildContext context) {
     final label = _mode == _ScanMode.barcode
         ? (_isScanning ? 'LOOKING UP...' : 'SCAN BARCODE')
-        : (_isScanning ? 'ANALYZING...' : 'GEMINI AI VISION');
+        : (_isScanning ? 'ANALYZING...' : 'AI VISION');
 
     return Positioned(
       top: MediaQuery.of(context).padding.top + 118,
@@ -424,13 +424,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.07),
+                color: Colors.white.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                    color: AppColors.softIndigo.withOpacity(0.5), width: 1),
+                    color: AppColors.softIndigo.withValues(alpha: 0.5), width: 1),
                 boxShadow: [
                   BoxShadow(
-                      color: AppColors.softIndigo.withOpacity(0.25),
+                      color: AppColors.softIndigo.withValues(alpha: 0.25),
                       blurRadius: 12)
                 ],
               ),
@@ -480,7 +480,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   boxShadow: [
                     BoxShadow(
                         color: AppColors.softIndigo
-                            .withOpacity(_pulseAnim.value * 0.15),
+                            .withValues(alpha: _pulseAnim.value * 0.15),
                         blurRadius: 40,
                         spreadRadius: 10)
                   ],
@@ -496,7 +496,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                       color:
-                          Colors.white.withOpacity(_pulseAnim.value * 0.25),
+                          Colors.white.withValues(alpha: _pulseAnim.value * 0.25),
                       width: 1.5),
                 ),
               ),
@@ -528,15 +528,15 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                             decoration: BoxDecoration(
                               gradient: LinearGradient(colors: [
                                 Colors.transparent,
-                                AppColors.dynamicMint.withOpacity(0.8),
+                                AppColors.dynamicMint.withValues(alpha: 0.8),
                                 AppColors.dynamicMint,
-                                AppColors.dynamicMint.withOpacity(0.8),
+                                AppColors.dynamicMint.withValues(alpha: 0.8),
                                 Colors.transparent,
                               ]),
                               boxShadow: [
                                 BoxShadow(
                                     color: AppColors.dynamicMint
-                                        .withOpacity(0.5),
+                                        .withValues(alpha: 0.5),
                                     blurRadius: 8,
                                     spreadRadius: 2)
                               ],
@@ -565,9 +565,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.softIndigo.withOpacity(0.12),
+                  color: AppColors.softIndigo.withValues(alpha: 0.12),
                   border: Border.all(
-                      color: AppColors.softIndigo.withOpacity(0.3), width: 1),
+                      color: AppColors.softIndigo.withValues(alpha: 0.3), width: 1),
                 ),
                 child: const Icon(PhosphorIconsRegular.aperture,
                     color: AppColors.softIndigo, size: 36),
@@ -591,12 +591,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: AppColors.dynamicMint
-                    .withOpacity(0.5 + _pulseAnim.value * 0.4),
+                    .withValues(alpha: 0.5 + _pulseAnim.value * 0.4),
                 width: 2),
             boxShadow: [
               BoxShadow(
                   color:
-                      AppColors.dynamicMint.withOpacity(_pulseAnim.value * 0.2),
+                      AppColors.dynamicMint.withValues(alpha: _pulseAnim.value * 0.2),
                   blurRadius: 20,
                   spreadRadius: 4)
             ],
@@ -647,7 +647,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           right: 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.transparent, Colors.black.withOpacity(0.92)],
+          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.92)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -659,10 +659,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: Colors.white.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(20),
               border:
-                  Border.all(color: Colors.white.withOpacity(0.08)),
+                  Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: const Text('Center your meal in the frame',
                 style: TextStyle(
@@ -690,7 +690,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     border: Border.all(color: Colors.white, width: 3.5),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           blurRadius: 20,
                           spreadRadius: 4)
                     ],
@@ -737,16 +737,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           right: 24),
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.dynamicMint.withOpacity(0.15),
+              color: AppColors.dynamicMint.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(PhosphorIconsRegular.barcode,
@@ -792,9 +792,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.07),
+              color: Colors.white.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withOpacity(0.12)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -804,7 +804,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.softIndigo.withOpacity(0.2),
+                        color: AppColors.softIndigo.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(PhosphorIconsFill.sparkle,
@@ -831,7 +831,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                 ? 'Searching Open Food Facts'
                                 : 'Identifying ingredients & macros',
                             style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white.withValues(alpha: 0.5),
                                 fontSize: 12),
                           ),
                         ],
@@ -882,11 +882,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                          color: Colors.white.withOpacity(0.15)),
+                          color: Colors.white.withValues(alpha: 0.15)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.white.withOpacity(0.04),
+                      backgroundColor: Colors.white.withValues(alpha: 0.04),
                     ),
                     child: const Text('Cancel',
                         style: TextStyle(
@@ -926,7 +926,7 @@ class _ModeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? AppColors.softIndigo
-              : Colors.white.withOpacity(0.06),
+              : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
@@ -963,9 +963,9 @@ class _TopBarButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
@@ -991,9 +991,9 @@ class _CameraActionBtn extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.15)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             ),
             child: Icon(icon, color: Colors.white70, size: 22),
           ),
@@ -1043,7 +1043,7 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
         Container(
           height: 6,
           decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(3)),
         ),
         FractionallySizedBox(
@@ -1056,7 +1056,7 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
               borderRadius: BorderRadius.circular(3),
               boxShadow: [
                 BoxShadow(
-                    color: AppColors.softIndigo.withOpacity(0.5),
+                    color: AppColors.softIndigo.withValues(alpha: 0.5),
                     blurRadius: 6)
               ],
             ),
@@ -1087,7 +1087,7 @@ class _ScanStep extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             border: Border.all(color: color, width: 1.5),
           ),
           child: done
@@ -1120,7 +1120,7 @@ class _CornerBracketPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(opacity)
+      ..color = color.withValues(alpha: opacity)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -1168,7 +1168,7 @@ class _ArcSpinnerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.6)
+      ..color = color.withValues(alpha: 0.6)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -1257,7 +1257,7 @@ class _ManualEntrySheetState extends ConsumerState<_ManualEntrySheet> {
                   width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
+                      color: Colors.grey.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
@@ -1266,7 +1266,7 @@ class _ManualEntrySheetState extends ConsumerState<_ManualEntrySheet> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                      color: AppColors.softIndigo.withOpacity(0.12),
+                      color: AppColors.softIndigo.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12)),
                   child: const Icon(PhosphorIconsFill.pencilSimple,
                       color: AppColors.softIndigo, size: 18),
@@ -1328,7 +1328,7 @@ class _ManualEntrySheetState extends ConsumerState<_ManualEntrySheet> {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.5))),
+                          .withValues(alpha: 0.5))),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -1347,7 +1347,7 @@ class _ManualEntrySheetState extends ConsumerState<_ManualEntrySheet> {
                           decoration: BoxDecoration(
                             color: _mealType == val
                                 ? AppColors.softIndigo
-                                : AppColors.softIndigo.withOpacity(0.08),
+                                : AppColors.softIndigo.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(label,
@@ -1423,7 +1423,7 @@ class _ManualTextField extends StatelessWidget {
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
-                    .withOpacity(0.5))),
+                    .withValues(alpha: 0.5))),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
@@ -1435,11 +1435,11 @@ class _ManualTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle:
-                TextStyle(color: Colors.grey.withOpacity(0.4)),
+                TextStyle(color: Colors.grey.withValues(alpha: 0.4)),
             filled: true,
             fillColor: isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.black.withOpacity(0.04),
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none),
@@ -1647,7 +1647,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(32)),
           border:
-              Border.all(color: Colors.white.withOpacity(isDark ? 0.08 : 0)),
+              Border.all(color: Colors.white.withValues(alpha: isDark ? 0.08 : 0)),
         ),
         child: ListView(
           controller: scrollCtrl,
@@ -1661,7 +1661,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
@@ -1693,7 +1693,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                             color: (isBarcode
                                     ? AppColors.dynamicMint
                                     : AppColors.softIndigo)
-                                .withOpacity(0.4),
+                                .withValues(alpha: 0.4),
                             blurRadius: 12)
                       ],
                     ),
@@ -1738,10 +1738,10 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _confidenceColor.withOpacity(0.12),
+                        color: _confidenceColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: _confidenceColor.withOpacity(0.3)),
+                            color: _confidenceColor.withValues(alpha: 0.3)),
                       ),
                       child: Text(confidence,
                           style: TextStyle(
@@ -1773,7 +1773,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                   ),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                      color: AppColors.softIndigo.withOpacity(0.2)),
+                      color: AppColors.softIndigo.withValues(alpha: 0.2)),
                 ),
                 child: Row(
                   children: [
@@ -1787,7 +1787,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
                                   color: AppColors.softIndigo
-                                      .withOpacity(0.7))),
+                                      .withValues(alpha: 0.7))),
                           const SizedBox(height: 4),
                           TweenAnimationBuilder<int>(
                             tween: IntTween(begin: 0, end: _effectiveCal),
@@ -1839,7 +1839,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                               value: v,
                               strokeWidth: 7,
                               backgroundColor:
-                                  AppColors.softIndigo.withOpacity(0.15),
+                                  AppColors.softIndigo.withValues(alpha: 0.15),
                               valueColor: const AlwaysStoppedAnimation(
                                   AppColors.softIndigo),
                               strokeCap: StrokeCap.round,
@@ -1885,16 +1885,16 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: selected
-                            ? AppColors.softIndigo.withOpacity(
+                            ? AppColors.softIndigo.withValues(alpha: 
                                 isDark ? 0.15 : 0.08)
                             : (isDark
-                                ? Colors.white.withOpacity(0.03)
-                                : Colors.grey.withOpacity(0.05)),
+                                ? Colors.white.withValues(alpha: 0.03)
+                                : Colors.grey.withValues(alpha: 0.05)),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: selected
-                              ? AppColors.softIndigo.withOpacity(0.4)
-                              : Colors.grey.withOpacity(0.15),
+                              ? AppColors.softIndigo.withValues(alpha: 0.4)
+                              : Colors.grey.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Row(
@@ -1911,7 +1911,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                               border: Border.all(
                                 color: selected
                                     ? AppColors.softIndigo
-                                    : Colors.grey.withOpacity(0.4),
+                                    : Colors.grey.withValues(alpha: 0.4),
                                 width: 2,
                               ),
                             ),
@@ -1946,7 +1946,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                                         ? (isDark
                                             ? Colors.white54
                                             : Colors.black45)
-                                        : Colors.grey.withOpacity(0.4),
+                                        : Colors.grey.withValues(alpha: 0.4),
                                   ),
                                 ),
                               ],
@@ -2023,7 +2023,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 5),
                         decoration: BoxDecoration(
-                          color: AppColors.softIndigo.withOpacity(0.12),
+                          color: AppColors.softIndigo.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(_portionLabel,
@@ -2039,9 +2039,9 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                     data: SliderTheme.of(context).copyWith(
                       activeTrackColor: AppColors.softIndigo,
                       inactiveTrackColor:
-                          AppColors.softIndigo.withOpacity(0.15),
+                          AppColors.softIndigo.withValues(alpha: 0.15),
                       thumbColor: AppColors.softIndigo,
-                      overlayColor: AppColors.softIndigo.withOpacity(0.1),
+                      overlayColor: AppColors.softIndigo.withValues(alpha: 0.1),
                       trackHeight: 4,
                       thumbShape: const RoundSliderThumbShape(
                           enabledThumbRadius: 10),
@@ -2110,7 +2110,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.5))),
+                              .withValues(alpha: 0.5))),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -2132,7 +2132,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                                 color: _mealType == val
                                     ? AppColors.softIndigo
                                     : AppColors.softIndigo
-                                        .withOpacity(0.08),
+                                        .withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(label,
@@ -2163,11 +2163,11 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                   ? Container(
                       height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.dynamicMint.withOpacity(0.12),
+                        color: AppColors.dynamicMint.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                             color:
-                                AppColors.dynamicMint.withOpacity(0.4)),
+                                AppColors.dynamicMint.withValues(alpha: 0.4)),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -2196,7 +2196,7 @@ class _ResultsBottomSheetState extends ConsumerState<_ResultsBottomSheet>
                               padding: const EdgeInsets.symmetric(
                                   vertical: 16),
                               side: BorderSide(
-                                  color: Colors.grey.withOpacity(0.3)),
+                                  color: Colors.grey.withValues(alpha: 0.3)),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16)),
                             ),
@@ -2291,7 +2291,7 @@ class _MacroBar extends StatelessWidget {
             Container(
               height: 8,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -2301,11 +2301,11 @@ class _MacroBar extends StatelessWidget {
                 height: 8,
                 decoration: BoxDecoration(
                   gradient:
-                      LinearGradient(colors: [color.withOpacity(0.7), color]),
+                      LinearGradient(colors: [color.withValues(alpha: 0.7), color]),
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: [
                     BoxShadow(
-                        color: color.withOpacity(0.3), blurRadius: 4)
+                        color: color.withValues(alpha: 0.3), blurRadius: 4)
                   ],
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import '../../../services/local_db_service.dart';
 import '../../../database/models/daily_log_doc.dart';
 import '../../../database/models/workout_doc.dart';
+import 'daily_activity_provider.dart';
 
 class WeeklyStats {
   final List<DailyLogDoc> days; // 7 entries, oldest → newest
@@ -37,7 +38,9 @@ class WeeklyStats {
 }
 
 final weeklyStatsProvider = Provider<WeeklyStats>((ref) {
-  final isar = ref.read(isarProvider);
+  // Watch today's live data so this recomputes when user logs meals/steps/etc.
+  ref.watch(dailyActivityProvider);
+  final isar = ref.watch(isarProvider);
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
 

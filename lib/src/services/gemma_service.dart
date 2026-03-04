@@ -441,13 +441,9 @@ class GemmaService {
     required OfflineModelInfo model,
     required void Function(double progress) onProgress,
   }) async {
-    // Block download on emulator — it would crash on load anyway.
-    if (await getIsEmulator()) {
-      throw Exception(
-        'Offline AI is not supported on the Android emulator.\n'
-        'Please use a physical Android device.',
-      );
-    }
+    // Note: We bypass the emulator block here to allow testing the UI.
+    // The load/initialize method will still block the emulator to prevent
+    // the SIGILL crash.
     String? token;
     if (model.gated) {
       token = await getStoredHfToken();

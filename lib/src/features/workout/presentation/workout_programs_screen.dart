@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/program_controller.dart';
 import '../../../database/models/workout_program_doc.dart';
 import '../../../database/models/workout_plan_doc.dart';
@@ -140,7 +141,7 @@ class _ProgramCard extends ConsumerWidget {
         ? program.currentWeek / program.weeksTotal
         : 0.0;
 
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () {
         HapticFeedback.lightImpact();
         context.push('/workout/program-detail', extra: program);
@@ -794,7 +795,7 @@ class _WeekSelector extends StatelessWidget {
           itemBuilder: (_, i) {
             final active = i == selectedWeek;
             final isCurrent = i + 1 == currentWeek;
-            return GestureDetector(
+            return AppAnimatedPressable(
               onTap: () => onSelect(i),
               child: AnimatedContainer(
                 duration: 200.ms,
@@ -860,7 +861,7 @@ class _DayCardState extends State<_DayCard> {
         widget.day['exercises'] as List<dynamic>? ?? [];
     final focus = widget.day['focus'] as String?;
 
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () {
         HapticFeedback.selectionClick();
         setState(() => _expanded = !_expanded);
@@ -930,7 +931,7 @@ class _DayCardState extends State<_DayCard> {
                     ),
                   ),
                   // Start button
-                    GestureDetector(
+                    AppAnimatedPressable(
                       onTap: () {
                         widget.onStart();
                       },
@@ -1071,7 +1072,7 @@ class _BottomBar extends StatelessWidget {
         children: [
           // Activate / Deactivate
           Expanded(
-            child: GestureDetector(
+            child: AppAnimatedPressable(
               onTap: activating ? null : onActivate,
               child: Container(
                 height: 52,
@@ -1132,7 +1133,7 @@ class _BottomBar extends StatelessWidget {
           ),
           if (canAdvance) ...[
             const SizedBox(width: 12),
-            GestureDetector(
+            AppAnimatedPressable(
               onTap: advancing ? null : onAdvance,
               child: Container(
                 height: 52,

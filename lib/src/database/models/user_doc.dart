@@ -18,12 +18,29 @@ class UserDoc {
   late DateTime createdAt;
   late DateTime lastActive;
 
-  // Goals
-  String primaryGoal = 'general_fitness';
-  String fitnessLevel = 'intermediate';
-  int calorieGoal = 2000;
-  int proteinGoalG = 150;
-  int waterGoalMl = 2500;
+    // Goals
+    String primaryGoal = 'general_fitness'; // fat_loss / muscle_gain / maintenance / recomposition / general_fitness
+    String fitnessLevel = 'intermediate';
+    int calorieGoal = 2000;
+    int proteinGoalG = 150;
+    int carbGoalG = 250;
+    int fatGoalG = 65;
+    int waterGoalMl = 2500;
+
+    // Body metrics for BMR/TDEE calculation
+    int ageYears = 25;
+    String activityLevel = 'moderate'; // sedentary / light / moderate / active / very_active
+
+    // Dietary profile
+    List<String> foodAllergies = [];        // nuts / dairy / gluten / shellfish / eggs / soy
+    List<String> medicalConditions = [];    // diabetes / hypertension / high_cholesterol
+
+    // Meal planning preferences
+    int mealsPerDay = 3;
+    String cuisinePreference = '';          // Indian / Mediterranean / Western / Asian / Any
+
+    // Eating profile (JSON serialized, updated by pattern analyzer)
+    String? eatingProfileJson;
 
   // Gamification
   List<String> unlockedAchievements = [];

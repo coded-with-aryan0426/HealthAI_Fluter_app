@@ -6,9 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../../profile/application/user_provider.dart';
 import '../application/meal_provider.dart';
 import '../application/weekly_nutrition_insight_provider.dart';
+import '../application/nutrition_analysis_provider.dart';
+import '../application/meal_plan_notifier.dart';
+import '../domain/nutrition_insight.dart';
 import '../../../database/models/meal_doc.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -37,6 +41,8 @@ class NutritionScreen extends ConsumerStatefulWidget {
 
 class _NutritionScreenState extends ConsumerState<NutritionScreen> {
   DateTime _selectedDate = DateTime.now();
+  // Meal type pill filter index (0 = All)
+  int _selectedMealTab = 0;
 
   DateTime get _midnight =>
       DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
@@ -92,25 +98,29 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
                 isDark ? AppColors.deepObsidian : Colors.white,
             elevation: 0,
             scrolledUnderElevation: 0,
-              leading: context.canPop()
-                  ? IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withOpacity(0.08)
-                              : Colors.black.withOpacity(0.05),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(PhosphorIconsRegular.arrowLeft,
-                            color: isDark
-                                ? Colors.white
-                                : AppColors.lightTextPrimary,
-                            size: 18),
-                      ),
-                      onPressed: () => context.pop(),
-                    )
-                  : null,
+              leading: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : Colors.black.withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(PhosphorIconsRegular.arrowLeft,
+                        color: isDark
+                            ? Colors.white
+                            : AppColors.lightTextPrimary,
+                        size: 18),
+                  ),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/dashboard');
+                    }
+                  },
+                ),
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 14),
               title: Text(
@@ -124,38 +134,86 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
                 ),
               ),
             ),
-            actions: [
-              IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+              actions: [
+                // Report Icon
+                IconButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/nutrition/weekly-report');
+                  },
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.softIndigo.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(PhosphorIconsFill.chartBar,
+                        color: AppColors.softIndigo, size: 18),
                   ),
-                  child: const Icon(PhosphorIconsFill.plus,
-                      color: AppColors.dynamicMint, size: 18),
                 ),
-                onPressed: () =>
-                    _showAddMealSheet(context, isDark, notifier),
-              ),
-              const SizedBox(width: 8),
-            ],
+                // Search Icon
+                IconButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/nutrition/food-search');
+                  },
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(PhosphorIconsFill.magnifyingGlass,
+                        color: AppColors.warning, size: 18),
+                  ),
+                ),
+                // Scan Icon
+                IconButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/scanner');
+                  },
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.dynamicMint.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(PhosphorIconsFill.barcode,
+                        color: AppColors.dynamicMint, size: 18),
+                  ),
+                ),
+                // Add Icon
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => _showAddMealSheet(context, isDark, notifier),
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.dynamicMint.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(PhosphorIconsFill.plus,
+                        color: AppColors.dynamicMint, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
           ),
         ],
         body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: scrollPhysics,
           padding: const EdgeInsets.only(bottom: 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Date picker ─────────────────────────────────────────────
               _DateNavigator(
-                label: _formatDate(_selectedDate),
+                label: _formatDate(_midnight),
                 onPrev: _prevDay,
                 onNext: _nextDay,
                 isDark: isDark,
               ).animate().fadeIn(duration: 300.ms),
-
               const SizedBox(height: 16),
 
               // ── Daily macro progress bars ────────────────────────────────
@@ -196,8 +254,36 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen> {
 
               const SizedBox(height: 24),
 
+              // ── AI Daily Insight card ────────────────────────────────────
+              _DailyInsightCard(date: _midnight, isDark: isDark)
+                  .animate()
+                  .fadeIn(delay: 200.ms),
+
+              const SizedBox(height: 16),
+
+              // ── AI Meal Planner entry ────────────────────────────────────
+              _MealPlannerEntryCard(isDark: isDark)
+                  .animate()
+                  .fadeIn(delay: 220.ms),
+
+              const SizedBox(height: 24),
+
+              // ── Meal type pill tab bar ───────────────────────────────────
+              AppPillTabBar(
+                tabs: const ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack'],
+                selectedIndex: _selectedMealTab,
+                onChanged: (i) => setState(() => _selectedMealTab = i),
+                activeColor: AppColors.dynamicMint,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
+
+              const SizedBox(height: 16),
+
               // ── Meals by type ────────────────────────────────────────────
-              ..._mealTypes.map((type) {
+              ..._mealTypes.where((type) {
+                if (_selectedMealTab == 0) return true;
+                return type == _mealTypes[_selectedMealTab - 1];
+              }).map((type) {
                 final typeMeals =
                     meals.where((m) => m.mealType == type).toList();
                 return _MealSection(
@@ -296,24 +382,24 @@ class _DateNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _NavBtn(icon: PhosphorIconsRegular.caretLeft, onTap: onPrev, isDark: isDark),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isDark
-                  ? Colors.white.withOpacity(0.06)
-                  : Colors.black.withOpacity(0.04),
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
                 color: isDark ? Colors.white : AppColors.lightTextPrimary,
               ),
             ),
@@ -334,18 +420,19 @@ class _NavBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
       },
+      pressScale: 0.9,
       child: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.white.withOpacity(0.07)
-              : Colors.black.withOpacity(0.04),
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon,
@@ -391,12 +478,12 @@ class _DailyMacroBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.07)
-                : Colors.black.withOpacity(0.05),
+                ? Colors.white.withValues(alpha: 0.07)
+                : Colors.black.withValues(alpha: 0.05),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -491,7 +578,7 @@ class _MacroProgressRow extends StatelessWidget {
                 Container(
                   height: 7,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(isDark ? 0.12 : 0.1),
+                    color: color.withValues(alpha: isDark ? 0.12 : 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -505,7 +592,7 @@ class _MacroProgressRow extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: (over ? AppColors.warning : color)
-                              .withOpacity(0.35),
+                              .withValues(alpha: 0.35),
                           blurRadius: 4,
                         ),
                       ],
@@ -573,11 +660,11 @@ class _MacroRingSummary extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: AppColors.dynamicMint.withOpacity(isDark ? 0.2 : 0.3),
+            color: AppColors.dynamicMint.withValues(alpha: isDark ? 0.2 : 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.dynamicMint.withOpacity(0.08),
+              color: AppColors.dynamicMint.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -597,7 +684,7 @@ class _MacroRingSummary extends StatelessWidget {
                   painter: _RingPainter(
                     progress: v,
                     color: AppColors.dynamicMint,
-                    bgColor: AppColors.dynamicMint.withOpacity(0.12),
+                    bgColor: AppColors.dynamicMint.withValues(alpha: 0.12),
                   ),
                   child: Center(
                     child: Column(
@@ -627,21 +714,22 @@ class _MacroRingSummary extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$totalCal',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                      color: AppColors.dynamicMint,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppCountUpText(
+                      value: totalCal.toDouble(),
+                      formatter: (v) => v.round().toString(),
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1,
+                        color: AppColors.dynamicMint,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'of $calorieGoal kcal goal',
+                    Text(
+                      'of $calorieGoal kcal goal',
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark ? Colors.white54 : Colors.black45,
@@ -655,7 +743,7 @@ class _MacroRingSummary extends StatelessWidget {
                       color: (remaining == 0
                               ? AppColors.warning
                               : AppColors.dynamicMint)
-                          .withOpacity(0.15),
+                          .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -790,9 +878,9 @@ class _MacroChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.12 : 0.08),
+          color: color.withValues(alpha: isDark ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -872,12 +960,12 @@ class _MealSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.black.withOpacity(0.04),
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
           ),
           boxShadow: [
             BoxShadow(
-              color: _color.withOpacity(0.06),
+              color: _color.withValues(alpha: 0.06),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -894,7 +982,7 @@ class _MealSection extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: _color.withOpacity(0.15),
+                      color: _color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(_icon, color: _color, size: 18),
@@ -924,7 +1012,7 @@ class _MealSection extends StatelessWidget {
                       ],
                     ),
                   ),
-                  GestureDetector(
+                  AppAnimatedPressable(
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onAdd();
@@ -933,7 +1021,7 @@ class _MealSection extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: _color.withOpacity(0.12),
+                        color: _color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(PhosphorIconsFill.plus,
@@ -998,7 +1086,7 @@ class _MealRow extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppColors.danger.withOpacity(0.15),
+          color: AppColors.danger.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(PhosphorIconsFill.trash,
@@ -1085,12 +1173,12 @@ class _QuickAddSection extends StatelessWidget {
             itemBuilder: (_, i) {
               final (name, type, cal, protein, carbs, fat) =
                   _quickFoods[i];
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  onQuickAdd(name, type, cal, protein, carbs, fat);
-                },
-                child: Container(
+                return AppAnimatedPressable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onQuickAdd(name, type, cal, protein, carbs, fat);
+                  },
+                  child: Container(
                   width: 120,
                   margin: const EdgeInsets.only(right: 12),
                   padding: const EdgeInsets.all(14),
@@ -1099,12 +1187,12 @@ class _QuickAddSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.07)
-                          : Colors.black.withOpacity(0.05),
+                          ? Colors.white.withValues(alpha: 0.07)
+                          : Colors.black.withValues(alpha: 0.05),
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+                        color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -1250,7 +1338,7 @@ class _AddMealSheetState extends State<_AddMealSheet> {
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
           border: Border.all(
-              color: Colors.white.withOpacity(isDark ? 0.07 : 0)),
+              color: Colors.white.withValues(alpha: isDark ? 0.07 : 0)),
         ),
         child: SafeArea(
           top: false,
@@ -1263,7 +1351,7 @@ class _AddMealSheetState extends State<_AddMealSheet> {
                   child: Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.3),
+                      color: Colors.grey.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1282,24 +1370,25 @@ class _AddMealSheetState extends State<_AddMealSheet> {
                   spacing: 8,
                   children: _mealTypes.map((type) {
                     final selected = type == _selectedType;
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _selectedType = type);
-                      },
-                      child: AnimatedContainer(
+                      return AppAnimatedPressable(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _selectedType = type);
+                        },
+                        pressScale: 0.93,
+                        child: AnimatedContainer(
                         duration: 200.ms,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: selected
                               ? AppColors.dynamicMint
-                              : AppColors.dynamicMint.withOpacity(0.1),
+                              : AppColors.dynamicMint.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: selected
                                 ? AppColors.dynamicMint
-                                : AppColors.dynamicMint.withOpacity(0.3),
+                                : AppColors.dynamicMint.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -1441,7 +1530,7 @@ class _Field extends StatelessWidget {
         prefixIcon: Icon(icon, size: 16, color: AppColors.dynamicMint),
         filled: true,
         fillColor: isDark
-            ? Colors.white.withOpacity(0.05)
+            ? Colors.white.withValues(alpha: 0.05)
             : AppColors.cloudGray,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1452,12 +1541,419 @@ class _Field extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-              color: AppColors.dynamicMint.withOpacity(0.15)),
+              color: AppColors.dynamicMint.withValues(alpha: 0.15)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide:
               const BorderSide(color: AppColors.dynamicMint, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Daily AI Insight Card ─────────────────────────────────────────────────────
+
+class _DailyInsightCard extends ConsumerWidget {
+  final DateTime date;
+  final bool isDark;
+
+  const _DailyInsightCard({required this.date, required this.isDark});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insightAsync = ref.watch(nutritionAnalysisProvider(date));
+    final meals = ref.watch(mealsForDateProvider(date));
+
+    // No meals — no card
+    if (meals.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: insightAsync.when(
+        loading: () => _InsightLoadingCard(isDark: isDark),
+        error: (_, __) => const SizedBox.shrink(),
+        data: (insight) {
+          if (insight == null) return const SizedBox.shrink();
+          return _InsightDataCard(insight: insight, isDark: isDark);
+        },
+      ),
+    );
+  }
+}
+
+class _InsightLoadingCard extends StatelessWidget {
+  final bool isDark;
+  const _InsightLoadingCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.charcoalCard : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: AppColors.softIndigo.withValues(alpha: isDark ? 0.2 : 0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.softIndigo.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.softIndigo),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text('Analysing today\'s nutrition...',
+              style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white54 : Colors.black45)),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightDataCard extends StatelessWidget {
+  final NutritionInsight insight;
+  final bool isDark;
+
+  const _InsightDataCard(
+      {required this.insight, required this.isDark});
+
+  Color get _gradeColor {
+    switch (insight.grade) {
+      case 'A': return AppColors.dynamicMint;
+      case 'B': return const Color(0xFF4CAF50);
+      case 'C': return AppColors.warning;
+      case 'D': return const Color(0xFFFF7043);
+      default:  return AppColors.danger;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final highAlerts =
+        insight.alerts.where((a) => a.severity == 'high').toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.charcoalCard : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: _gradeColor.withValues(alpha: isDark ? 0.25 : 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _gradeColor.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: _gradeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      insight.grade,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _gradeColor,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('TODAY\'S SCORE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                                color: _gradeColor.withValues(alpha: 0.8),
+                              )),
+                          const Spacer(),
+                          Text('${insight.score}/100',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _gradeColor,
+                              )),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: insight.score / 100),
+                          duration: 900.ms,
+                          curve: Curves.easeOutCubic,
+                          builder: (_, v, __) => LinearProgressIndicator(
+                            value: v,
+                            minHeight: 6,
+                            backgroundColor: _gradeColor.withValues(alpha: 0.12),
+                            valueColor:
+                                AlwaysStoppedAnimation(_gradeColor),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Summary
+          if (insight.summary.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Text(
+                insight.summary,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+            ),
+
+          // High-severity alerts
+          if (highAlerts.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Column(
+                children: highAlerts
+                    .take(2)
+                    .map((a) => _AlertChip(alert: a, isDark: isDark))
+                    .toList(),
+              ),
+            ),
+
+          // Top suggestion
+          if (insight.suggestions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.dynamicMint.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.dynamicMint.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(PhosphorIconsFill.lightbulb,
+                        color: AppColors.dynamicMint, size: 14),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        insight.suggestions.first,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlertChip extends StatelessWidget {
+  final NutritionAlert alert;
+  final bool isDark;
+
+  const _AlertChip({required this.alert, required this.isDark});
+
+  Color get _alertColor {
+    switch (alert.type) {
+      case 'deficiency': return AppColors.warning;
+      case 'excess': return AppColors.danger;
+      default: return AppColors.softIndigo;
+    }
+  }
+
+  IconData get _alertIcon {
+    switch (alert.type) {
+      case 'deficiency': return PhosphorIconsFill.arrowDown;
+      case 'excess': return PhosphorIconsFill.arrowUp;
+      default: return PhosphorIconsFill.warning;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: _alertColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(_alertIcon, size: 12, color: _alertColor),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              alert.message,
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? Colors.white60 : Colors.black54,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Meal Planner Entry Card ────────────────────────────────────────────────────
+
+class _MealPlannerEntryCard extends ConsumerWidget {
+  final bool isDark;
+  const _MealPlannerEntryCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final planState = ref.watch(mealPlanNotifierProvider);
+    final hasActivePlan = planState.activePlan != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: AppAnimatedPressable(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          context.push('/meal-planner');
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [const Color(0xFF0E1A2E), const Color(0xFF0A1224)]
+                  : [const Color(0xFFEEF2FF), const Color(0xFFE3EAFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: AppColors.softIndigo.withValues(alpha: isDark ? 0.25 : 0.3),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.softIndigo.withValues(alpha: 0.07),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.softIndigo.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(PhosphorIconsFill.calendarDots,
+                    color: AppColors.softIndigo, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasActivePlan ? 'View Your Meal Plan' : 'AI Meal Planner',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasActivePlan
+                          ? '${planState.activePlan!.durationDays}-day plan active  ·  ${planState.activePlan!.avgDailyCalories} kcal/day'
+                          : 'Generate a personalised meal plan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.softIndigo,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasActivePlan
+                          ? PhosphorIconsRegular.arrowRight
+                          : PhosphorIconsFill.sparkle,
+                      color: Colors.white,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasActivePlan ? 'View' : 'Create',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1487,11 +1983,11 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.dynamicMint.withOpacity(isDark ? 0.25 : 0.3),
+            color: AppColors.dynamicMint.withValues(alpha: isDark ? 0.25 : 0.3),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.dynamicMint.withOpacity(0.08),
+              color: AppColors.dynamicMint.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -1505,7 +2001,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(0.15),
+                    color: AppColors.dynamicMint.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const SizedBox(
@@ -1541,7 +2037,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(0.15),
+                    color: AppColors.dynamicMint.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(PhosphorIconsFill.lightbulb,
@@ -1568,7 +2064,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.dynamicMint.withOpacity(0.15),
+                        color: AppColors.dynamicMint.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(PhosphorIconsFill.lightbulb,
@@ -1598,7 +2094,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.dynamicMint.withOpacity(0.15),
+                          color: AppColors.dynamicMint.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(PhosphorIconsFill.lightbulb,
@@ -1614,7 +2110,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
-                                    color: AppColors.dynamicMint.withOpacity(0.8))),
+                                    color: AppColors.dynamicMint.withValues(alpha: 0.8))),
                             const Text('AI Nutrition Analysis',
                                 style: TextStyle(
                                     fontSize: 14,
@@ -1622,7 +2118,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      GestureDetector(
+                      AppAnimatedPressable(
                         onTap: () {
                           HapticFeedback.lightImpact();
                           ref.read(weeklyNutritionInsightProvider.notifier).refresh();
@@ -1630,7 +2126,7 @@ class _WeeklyNutritionInsightCard extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.dynamicMint.withOpacity(0.12),
+                            color: AppColors.dynamicMint.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(PhosphorIconsRegular.arrowsClockwise,
@@ -1723,9 +2219,9 @@ class _StatPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1736,7 +2232,7 @@ class _StatPill extends StatelessWidget {
             Text(label,
                 style: TextStyle(
                     fontSize: 9,
-                    color: color.withOpacity(0.7),
+                    color: color.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.3)),
           ],

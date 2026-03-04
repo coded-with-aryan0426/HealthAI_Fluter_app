@@ -62,7 +62,7 @@ class UserNotifier extends Notifier<UserDoc> {
   }) async {
     final updated = _clone(state)
       ..displayName = name ?? state.displayName
-      ..photoUrl = photoUrl ?? state.photoUrl
+      ..photoUrl = photoUrl == null ? state.photoUrl : (photoUrl.isEmpty ? null : photoUrl)
       ..weightKg = weightKg ?? state.weightKg
       ..heightCm = heightCm ?? state.heightCm
       ..dob = dob ?? state.dob

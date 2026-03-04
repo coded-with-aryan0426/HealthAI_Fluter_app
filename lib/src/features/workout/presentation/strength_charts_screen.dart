@@ -7,10 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/strength_chart_provider.dart';
 
 // ── Active chart tab provider ─────────────────────────────────────────────────
-enum _ChartTab { volume, oneRM, reps }
+enum _ChartTab { volume, oneRM, reps, weight }
 
 final _chartTabProvider = StateProvider<_ChartTab>((ref) => _ChartTab.oneRM);
 
@@ -178,15 +179,21 @@ class StrengthChartsScreen extends ConsumerWidget {
           accent: AppColors.dynamicMint,
           isDark: isDark,
         );
-      case _ChartTab.reps:
-        return _RepsLineChart(
-          points: points,
-          accent: AppColors.softIndigo,
-          isDark: isDark,
-        );
+        case _ChartTab.reps:
+          return _RepsLineChart(
+            points: points,
+            accent: AppColors.softIndigo,
+            isDark: isDark,
+          );
+        case _ChartTab.weight:
+          return _WeightLineChart(
+            points: points,
+            accent: AppColors.warning,
+            isDark: isDark,
+          );
+      }
     }
   }
-}
 
 // ── Exercise picker (horizontal chips) ───────────────────────────────────────
 
@@ -213,7 +220,7 @@ class _ExercisePicker extends StatelessWidget {
         itemBuilder: (_, i) {
           final name = names[i];
           final active = name == selected;
-          return GestureDetector(
+          return AppAnimatedPressable(
             onTap: () => onSelect(name),
             child: AnimatedContainer(
               duration: 200.ms,
@@ -267,12 +274,14 @@ class _ChartTabBar extends StatelessWidget {
       (_ChartTab.volume,  'Volume',  PhosphorIconsFill.chartBar),
       (_ChartTab.oneRM,   '1RM',     PhosphorIconsFill.lightning),
       (_ChartTab.reps,    'Reps',    PhosphorIconsFill.repeat),
+      (_ChartTab.weight,  'Weight',  PhosphorIconsFill.barbell),
     ];
 
     final descriptions = {
       _ChartTab.volume: 'Total kg lifted per week',
       _ChartTab.oneRM:  'Estimated 1-rep max (Epley)',
       _ChartTab.reps:   'Max reps in best set per session',
+      _ChartTab.weight: 'Best weight lifted per session',
     };
 
     return Column(
@@ -292,13 +301,14 @@ class _ChartTabBar extends StatelessWidget {
               final (tab, label, icon) = t;
               final isActive = tab == activeTab;
               Color accent;
-              switch (tab) {
-                case _ChartTab.volume: accent = AppColors.warning; break;
-                case _ChartTab.oneRM:  accent = AppColors.dynamicMint; break;
-                case _ChartTab.reps:   accent = AppColors.softIndigo; break;
-              }
+                switch (tab) {
+                  case _ChartTab.volume: accent = AppColors.warning; break;
+                  case _ChartTab.oneRM:  accent = AppColors.dynamicMint; break;
+                  case _ChartTab.reps:   accent = AppColors.softIndigo; break;
+                  case _ChartTab.weight: accent = AppColors.warning; break;
+                }
               return Expanded(
-                child: GestureDetector(
+                child: AppAnimatedPressable(
                   onTap: () => onSelect(tab),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),

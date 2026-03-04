@@ -81,6 +81,13 @@ String buildAiContext(Ref ref) {
               ? 'evening'
               : 'night';
 
+  final dietaryList = user.preferences.dietary;
+  final dietaryLine = dietaryList.isEmpty
+      ? 'none — user eats all foods including meat and animal products'
+      : '⚠️ HARD RESTRICTIONS (MUST FOLLOW): ${dietaryList.join(', ').toUpperCase()} — '
+          'ALL meal plans and food suggestions MUST strictly comply with these restrictions. '
+          'NEVER suggest foods that violate them.';
+
   return '''[User Health Context — use for personalisation only, never repeat unless directly asked]:
 - Name: ${user.displayName ?? 'User'} | Age: $age | Gender: ${user.gender ?? 'not specified'}
 - Body: Height $height | Weight $weight | BMI: $bmi
@@ -93,5 +100,5 @@ String buildAiContext(Ref ref) {
 - Today's meals: $mealSummary
 - Recent Workouts: $workoutSummary
 - Habit streak: $streak days | Today: $completedToday/${habits.length} habits completed
-- Dietary preferences: ${user.preferences.dietary.isEmpty ? 'none specified' : user.preferences.dietary.join(', ')}''';
+- Dietary restrictions: $dietaryLine''';
 }

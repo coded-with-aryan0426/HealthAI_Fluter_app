@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import 'package:health_app/src/database/models/workout_plan_doc.dart';
 import 'package:health_app/src/database/models/workout_doc.dart';
 import '../application/workout_controller.dart';
@@ -602,7 +603,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
           final ghost = _ghostFor(ex.name, i);
           final isPr = done && _isPR(ex.name, log.weightKg);
 
-          return GestureDetector(
+          return AppAnimatedPressable(
             onTap: done ? null : () => _logSet(i),
             child: AnimatedContainer(
               duration: 350.ms,
@@ -854,7 +855,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
                   if (_currentExIndex > 0) const SizedBox(width: 12),
 
                   Expanded(
-                    child: GestureDetector(
+                    child: AppAnimatedPressable(
                       onTap: () {
                         if (allSetsDone) {
                           if (isLast) {
@@ -956,7 +957,7 @@ class _WorkoutPlayerScreenState extends ConsumerState<WorkoutPlayerScreen>
                 onTap: () => _adjustRest(-15),
               ),
               const SizedBox(width: 16),
-              GestureDetector(
+              AppAnimatedPressable(
                 onTap: () {
                   _restTimer?.cancel();
                   setState(() => _isResting = false);
@@ -1204,7 +1205,7 @@ class _RestAdjustButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
       child: Container(
         padding:
@@ -1298,7 +1299,7 @@ class _BlurCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
       child: Container(
         width: 44,
@@ -1320,7 +1321,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
       child: Container(
         width: 58,

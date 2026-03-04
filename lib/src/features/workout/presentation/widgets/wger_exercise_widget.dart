@@ -119,7 +119,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
                   decoration: BoxDecoration(
                     color: i == _imgIndex
                         ? widget.accentColor
-                        : Colors.white.withOpacity(0.3),
+                        : Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -134,7 +134,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -156,7 +156,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
             child: Text(
               'wger.de / CC-BY-SA',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 fontSize: 8,
                 fontWeight: FontWeight.w500,
               ),
@@ -170,7 +170,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
     return Container(
       height: widget.height,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Center(
@@ -194,7 +194,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
       decoration: BoxDecoration(
         gradient: RadialGradient(
           colors: [
-            widget.accentColor.withOpacity(0.08),
+            widget.accentColor.withValues(alpha: 0.08),
             Colors.transparent,
           ],
         ),
@@ -203,7 +203,7 @@ class _WgerExerciseWidgetState extends ConsumerState<WgerExerciseWidget>
         child: Text(
           letter,
           style: TextStyle(
-            color: widget.accentColor.withOpacity(0.12),
+            color: widget.accentColor.withValues(alpha: 0.12),
             fontSize: 120,
             fontWeight: FontWeight.w900,
           ),
@@ -241,7 +241,7 @@ class _ExerciseImage extends StatelessWidget {
           ),
         ),
         errorWidget: (_, __, ___) => Center(
-          child: Icon(Icons.fitness_center, color: accentColor.withOpacity(0.3), size: 48),
+          child: Icon(Icons.fitness_center, color: accentColor.withValues(alpha: 0.3), size: 48),
         ),
       ),
     );

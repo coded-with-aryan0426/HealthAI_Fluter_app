@@ -4,29 +4,42 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:google_generative_ai/google_generative_ai.dart' as gemini;
 import '../../src/database/models/chat_session_doc.dart';
 
 final aiServiceProvider = Provider<AIService>((ref) {
   return AIService();
 });
 
-// ─── HuggingFace chat models ──────────────────────────────────────────────────
+// ─── AI Providers & Models ────────────────────────────────────────────────────
+enum AIProvider { openrouter, gemini, huggingface }
+
+class AIModelConfig {
+  final AIProvider provider;
+  final String modelId;
+  const AIModelConfig(this.provider, this.modelId);
+}
+
 // Tried in order. Falls back on quota/rate-limit.
-const List<String> _kHfChatModels = [
-  'meta-llama/Llama-3.3-70B-Instruct',  // Best: strong health/fitness reasoning
-  'meta-llama/Llama-3.1-8B-Instruct',   // Fallback: fast & free
-  'mistralai/Mistral-7B-Instruct-v0.3', // Last resort
+const List<AIModelConfig> _kChatModels = [
+  AIModelConfig(AIProvider.openrouter, 'google/gemini-2.5-flash'), // Try OR first (bypasses region block)
+  AIModelConfig(AIProvider.openrouter, 'meta-llama/llama-3.3-70b-instruct:free'), // Excellent free fallback
+  AIModelConfig(AIProvider.gemini, 'gemini-2.0-flash'), // Direct Google API (if region allows)
+  AIModelConfig(AIProvider.huggingface, 'meta-llama/Llama-3.3-70B-Instruct'),
+  AIModelConfig(AIProvider.huggingface, 'Qwen/Qwen2.5-72B-Instruct'),
 ];
 
-// ─── HuggingFace vision models (food scanner) ────────────────────────────────
-// Multimodal models that accept base64 images via the same HF Router endpoint.
-const List<String> _kHfVisionModels = [
-  'Qwen/Qwen2.5-VL-7B-Instruct',            // Best: state-of-art food recognition
-  'meta-llama/Llama-3.2-11B-Vision-Instruct', // Fallback: strong reasoning
+// Multimodal models that accept image data.
+const List<AIModelConfig> _kVisionModels = [
+  AIModelConfig(AIProvider.gemini, 'gemini-2.0-flash'),
+  AIModelConfig(AIProvider.huggingface, 'Qwen/Qwen2.5-VL-7B-Instruct'),
+  AIModelConfig(AIProvider.huggingface, 'meta-llama/Llama-3.2-11B-Vision-Instruct'),
 ];
 
 const String _kHfRouterUrl =
     'https://router.huggingface.co/v1/chat/completions';
+const String _kOrUrl =
+    'https://openrouter.ai/api/v1/chat/completions';
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +79,17 @@ Example: "Would you prefer: A) Fast results with intense training  B) Sustainabl
 STEP 4: SOLUTION GENERATION
 Generate a structured, personalized plan using the user's ACTUAL data from context (real weight, height, calorie target, goal, fitness level, recent workouts, etc.). Never generate generic plans. Always explain why it fits THIS user specifically.
 Format with clear headings, bullet points, short sections, and actionable steps.
+
+DIETARY RESTRICTIONS RULE (CRITICAL — HIGHEST PRIORITY):
+The [User Health Context] block contains a "Dietary restrictions" field. You MUST treat this as a HARD constraint — not a suggestion.
+- If the user is VEGETARIAN: NEVER suggest any meat, poultry, or seafood (no chicken, beef, fish, salmon, tuna, shrimp, lamb, turkey, etc.). Only suggest plant-based foods, dairy, and eggs.
+- If the user is VEGAN: NEVER suggest any animal products whatsoever — no meat, fish, dairy (milk, cheese, yogurt, butter, whey), eggs, or honey. Only suggest 100% plant-based foods.
+- If the user is KETO: keep all meals under 20–30g net carbs/day. No bread, rice, pasta, sugar, or high-carb fruits.
+- If the user is GLUTEN_FREE: NEVER suggest wheat, barley, rye, or any gluten-containing food.
+- If the user is DAIRY_FREE: NEVER suggest milk, cheese, yogurt, butter, cream, or whey.
+- If the user is HALAL: NEVER suggest pork, alcohol, or non-halal meat.
+- Violations of dietary restrictions are UNACCEPTABLE regardless of nutritional goals. Always find compliant alternatives.
+- If the user has multiple restrictions (e.g. vegan + gluten-free), ALL restrictions apply simultaneously.
 
 MEAL PLAN OUTPUT RULE (CRITICAL):
 Whenever you generate a meal plan, diet plan, or daily eating schedule, you MUST append a structured machine-readable JSON block at the END of your response, after all Markdown text, using EXACTLY this format:
@@ -166,7 +190,7 @@ const _kVisionSystemPrompt =
 
 // ─── Error classification helpers ─────────────────────────────────────────────
 
-bool _isHfFallbackError(int statusCode, String body) {
+bool _isFallbackError(int statusCode, String body) {
   if (statusCode == 429 || statusCode == 503 || statusCode == 402) return true;
   final lower = body.toLowerCase();
   return lower.contains('quota') ||
@@ -181,49 +205,45 @@ bool _isHfFallbackError(int statusCode, String body) {
 
 class AIService {
   final String _hfToken;
+  final String _geminiKey;
+  final String _orKey; // OpenRouter Key
 
   // Chat state
   int _chatModelIndex = 0;
   DateTime _chatResetAt = DateTime.now().add(const Duration(hours: 1));
   List<Map<String, String>> _history = [];
-  String? _userContext; // injected once per session, sent as a system message
+  String? _userContext; // injected once per session
 
   // Vision state
   int _visionModelIndex = 0;
   DateTime _visionResetAt = DateTime.now().add(const Duration(hours: 1));
 
-  AIService() : _hfToken = _resolveHfToken();
-
-  static String _resolveHfToken() {
-    final key = dotenv.env['HF_TOKEN'] ?? '';
-    if (key.isEmpty) {
-      throw Exception(
-          'HF_TOKEN is not set in the .env file. Please add your HuggingFace token.');
-    }
-    return key;
-  }
+  AIService()
+      : _hfToken = dotenv.env['HF_TOKEN'] ?? '',
+        _geminiKey = dotenv.env['GEMINI_API_KEY'] ?? '',
+        _orKey = dotenv.env['OPENROUTER_API_KEY'] ?? '';
 
   // ── Chat model rotation ────────────────────────────────────────────────────
 
   void _advanceChatModel() {
     _chatModelIndex++;
     _chatResetAt = DateTime.now().add(const Duration(hours: 1));
-    if (_chatModelIndex < _kHfChatModels.length) {
-      debugPrint('[HF] Switching chat → ${_kHfChatModels[_chatModelIndex]}');
+    if (_chatModelIndex < _kChatModels.length) {
+      debugPrint('[AI] Switched chat model to ${_kChatModels[_chatModelIndex].modelId}');
     }
   }
 
   void _maybeResetChatModel() {
     if (_chatModelIndex > 0 && DateTime.now().isAfter(_chatResetAt)) {
-      debugPrint('[HF] 1h reset — chat back to ${_kHfChatModels[0]}');
+      debugPrint('[AI] Reset chat model to ${_kChatModels[0].modelId}');
       _chatModelIndex = 0;
     }
   }
 
   String get activeChatModel {
     _maybeResetChatModel();
-    if (_chatModelIndex >= _kHfChatModels.length) return 'none (all exhausted)';
-    return _kHfChatModels[_chatModelIndex];
+    if (_chatModelIndex >= _kChatModels.length) return 'none (exhausted)';
+    return _kChatModels[_chatModelIndex].modelId;
   }
 
   // ── Vision model rotation ──────────────────────────────────────────────────
@@ -231,25 +251,22 @@ class AIService {
   void _advanceVisionModel() {
     _visionModelIndex++;
     _visionResetAt = DateTime.now().add(const Duration(hours: 1));
-    if (_visionModelIndex < _kHfVisionModels.length) {
-      debugPrint(
-          '[HF] Switching vision → ${_kHfVisionModels[_visionModelIndex]}');
+    if (_visionModelIndex < _kVisionModels.length) {
+      debugPrint('[AI] Switched vision model to ${_kVisionModels[_visionModelIndex].modelId}');
     }
   }
 
   void _maybeResetVisionModel() {
     if (_visionModelIndex > 0 && DateTime.now().isAfter(_visionResetAt)) {
-      debugPrint('[HF] 1h reset — vision back to ${_kHfVisionModels[0]}');
+      debugPrint('[AI] Reset vision model to ${_kVisionModels[0].modelId}');
       _visionModelIndex = 0;
     }
   }
 
   String get activeVisionModel {
     _maybeResetVisionModel();
-    if (_visionModelIndex >= _kHfVisionModels.length) {
-      return 'none (all exhausted)';
-    }
-    return _kHfVisionModels[_visionModelIndex];
+    if (_visionModelIndex >= _kVisionModels.length) return 'none (exhausted)';
+    return _kVisionModels[_visionModelIndex].modelId;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -259,8 +276,6 @@ class AIService {
     _userContext = null;
   }
 
-  /// Sets the user's health profile context. Called on every new/loaded session
-  /// so the AI always has the user's data and never needs to re-ask for it.
   void setUserContext(String context) => _userContext = context;
 
   void loadHistory(List<ChatMessageDoc> history) {
@@ -273,60 +288,32 @@ class AIService {
         .toList();
   }
 
-  List<Map<String, String>> _buildMessages() {
-    return [
-      {'role': 'system', 'content': _kSystemPrompt},
-      if (_userContext != null) {'role': 'system', 'content': _userContext!},
-      ..._history,
-    ];
-  }
-
-  /// Sends a chat message via HuggingFace Inference Router.
-  /// Falls back through [_kHfChatModels] on quota/rate-limit errors.
+  /// Sends a chat message, automatically cascading through Gemini and HuggingFace models.
   Future<String?> sendMessage(String text) async {
     _maybeResetChatModel();
     _history.add({'role': 'user', 'content': text});
-    final messages = _buildMessages();
 
-    while (_chatModelIndex < _kHfChatModels.length) {
-      final model = _kHfChatModels[_chatModelIndex];
+    while (_chatModelIndex < _kChatModels.length) {
+      final config = _kChatModels[_chatModelIndex];
+
       try {
-        final response = await http.post(
-          Uri.parse(_kHfRouterUrl),
-          headers: {
-            'Authorization': 'Bearer $_hfToken',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'model': model,
-            'messages': messages,
-            'max_tokens': 3000,
-            'temperature': 0.7,
-            'stream': false,
-          }),
-        );
-
-        debugPrint('[HF chat] $model → ${response.statusCode}');
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final content =
-              data['choices'][0]['message']['content'] as String? ?? '';
-          _history.add({'role': 'assistant', 'content': content});
-          return content;
-        } else if (_isHfFallbackError(response.statusCode, response.body)) {
-          debugPrint('[HF chat] $model rate-limited, falling back');
-          _advanceChatModel();
-          continue;
+        String? response;
+        if (config.provider == AIProvider.openrouter) {
+          response = await _sendOpenRouterMessage(config.modelId);
+        } else if (config.provider == AIProvider.gemini) {
+          response = await _sendGeminiMessage(config.modelId);
         } else {
-          debugPrint('[HF chat] $model error: ${response.body}');
-          _history.removeLast();
-          return "I'm having trouble connecting right now. Please try again in a moment.";
+          response = await _sendHfMessage(config.modelId);
+        }
+
+        if (response != null && response.isNotEmpty) {
+          _history.add({'role': 'assistant', 'content': response});
+          return response;
         }
       } catch (e) {
-        debugPrint('[HF chat] $model exception: $e');
-        _history.removeLast();
-        return "I'm having trouble connecting right now. Please try again in a moment.";
+        debugPrint('[AI] ${config.modelId} failed: $e');
+        _advanceChatModel();
+        continue;
       }
     }
 
@@ -334,85 +321,63 @@ class AIService {
     return '__ALL_EXHAUSTED__';
   }
 
-  /// Streams chat tokens via HuggingFace Server-Sent Events.
-  /// Yields each incremental text delta as a [String].
-  /// On quota/error, yields a sentinel string starting with '__ERROR__:'.
+  /// Streams a chat message, cascading if models fail before yielding tokens.
   Stream<String> streamMessage(String text) async* {
     _maybeResetChatModel();
     _history.add({'role': 'user', 'content': text});
-    final messages = _buildMessages();
 
     String fullResponse = '';
     bool succeeded = false;
 
-    while (_chatModelIndex < _kHfChatModels.length) {
-      final model = _kHfChatModels[_chatModelIndex];
+    while (_chatModelIndex < _kChatModels.length) {
+      final config = _kChatModels[_chatModelIndex];
+
       try {
-        final request = http.Request('POST', Uri.parse(_kHfRouterUrl));
-        request.headers['Authorization'] = 'Bearer $_hfToken';
-        request.headers['Content-Type'] = 'application/json';
-        request.headers['Accept'] = 'text/event-stream';
-        request.body = jsonEncode({
-          'model': model,
-          'messages': messages,
-          'max_tokens': 3000,
-          'temperature': 0.7,
-          'stream': true,
-        });
-
-        final streamedResponse =
-            await http.Client().send(request).timeout(const Duration(seconds: 90));
-
-        debugPrint('[HF stream] $model → ${streamedResponse.statusCode}');
-
-        if (streamedResponse.statusCode == 200) {
-          final byteStream = streamedResponse.stream;
-          final lines = byteStream
-              .transform(const Utf8Decoder())
-              .transform(const LineSplitter());
-
-          await for (final line in lines) {
-            if (line.startsWith('data: ')) {
-              final raw = line.substring(6).trim();
-              if (raw == '[DONE]') break;
-              try {
-                final json = jsonDecode(raw) as Map<String, dynamic>;
-                final delta =
-                    json['choices']?[0]?['delta']?['content'] as String?;
-                if (delta != null && delta.isNotEmpty) {
-                  fullResponse += delta;
-                  yield delta;
-                }
-              } catch (_) {
-                // Malformed SSE chunk — skip
-              }
+        if (config.provider == AIProvider.openrouter) {
+          await for (final chunk in _streamOpenRouterMessage(config.modelId)) {
+            if (chunk == '__FALLBACK_TRIGGER__') {
+              succeeded = false;
+              break; 
             }
+            if (chunk.startsWith('__ERROR__:')) {
+              yield chunk;
+              _history.removeLast();
+              return;
+            }
+            fullResponse += chunk;
+            yield chunk;
+            succeeded = true;
           }
-
-          succeeded = true;
-          break;
+        } else if (config.provider == AIProvider.gemini) {
+          await for (final chunk in _streamGeminiMessage(config.modelId)) {
+            fullResponse += chunk;
+            yield chunk;
+            succeeded = true;
+          }
         } else {
-          final body = await streamedResponse.stream
-              .transform(const Utf8Decoder())
-              .join();
-          if (_isHfFallbackError(streamedResponse.statusCode, body)) {
-            debugPrint('[HF stream] $model rate-limited, falling back');
-            _advanceChatModel();
-            continue;
+          await for (final chunk in _streamHfMessage(config.modelId)) {
+            if (chunk == '__FALLBACK_TRIGGER__') {
+              succeeded = false;
+              break; 
+            }
+            if (chunk.startsWith('__ERROR__:')) {
+              yield chunk;
+              _history.removeLast();
+              return;
+            }
+            fullResponse += chunk;
+            yield chunk;
+            succeeded = true;
           }
-          yield '__ERROR__: ${streamedResponse.statusCode}';
-          _history.removeLast();
-          return;
         }
-      } on TimeoutException {
-        debugPrint('[HF stream] $model timeout');
+
+        if (succeeded) break;
+
+        // If not succeeded (triggered fallback internally)
         _advanceChatModel();
-        continue;
       } catch (e) {
-        debugPrint('[HF stream] $model exception: $e');
-        yield '__ERROR__: $e';
-        _history.removeLast();
-        return;
+        debugPrint('[AI] ${config.modelId} stream failed: $e');
+        _advanceChatModel();
       }
     }
 
@@ -429,32 +394,289 @@ class AIService {
     }
   }
 
-  /// Analyzes a food image using HuggingFace vision models.
-  /// Falls back through [_kHfVisionModels] on quota/rate-limit errors.
-  Future<String?> analyzeFoodImage(
-      List<int> imageBytes, String mimeType) async {
+  /// Analyzes a food image cascading through vision models.
+  Future<String?> analyzeFoodImage(List<int> imageBytes, String mimeType) async {
     _maybeResetVisionModel();
 
-    // Resize/compress: HF serverless has a ~2MB JSON body limit.
+    // Resize/compress: HF serverless limit is ~2MB JSON. Gemini accepts up to 20MB.
     final bytes = imageBytes.length > 1500000
         ? imageBytes.sublist(0, 1500000)
         : imageBytes;
 
+    while (_visionModelIndex < _kVisionModels.length) {
+      final config = _kVisionModels[_visionModelIndex];
+      try {
+        String? response;
+        if (config.provider == AIProvider.gemini) {
+          response = await _analyzeFoodImageGemini(bytes, mimeType, config.modelId);
+        } else {
+          response = await _analyzeFoodImageHf(bytes, mimeType, config.modelId);
+        }
+
+        if (response != null && response.isNotEmpty) {
+          return response;
+        }
+      } catch (e) {
+        debugPrint('[AI] ${config.modelId} vision failed: $e');
+        _advanceVisionModel();
+      }
+    }
+
+    return null; // All vision models exhausted
+  }
+
+  // ─── Internal OpenRouter Implementations ──────────────────────────────────
+
+  Future<String?> _sendOpenRouterMessage(String modelId) async {
+    if (_orKey.isEmpty) throw Exception('OPENROUTER_API_KEY missing');
+    final response = await http.post(
+      Uri.parse(_kOrUrl),
+      headers: {
+        'Authorization': 'Bearer $_orKey',
+        'HTTP-Referer': 'https://github.com/HealthAI', 
+        'X-Title': 'HealthAI Coach',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': modelId,
+        'messages': _buildHfMessages(), // Same struct as HF
+        'max_tokens': 3000,
+        'temperature': 0.7,
+        'stream': false,
+      }),
+    );
+
+    debugPrint('[OR chat] $modelId → ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'] as String? ?? '';
+    } else if (_isFallbackError(response.statusCode, response.body)) {
+      throw Exception('OpenRouter Quota or Rate Limit hit');
+    } else {
+      debugPrint('[OR chat] $modelId error: ${response.body}');
+      throw Exception('OR Error: ${response.statusCode}');
+    }
+  }
+
+  Stream<String> _streamOpenRouterMessage(String modelId) async* {
+    if (_orKey.isEmpty) {
+      yield '__FALLBACK_TRIGGER__';
+      return;
+    }
+    final request = http.Request('POST', Uri.parse(_kOrUrl));
+    request.headers['Authorization'] = 'Bearer $_orKey';
+    request.headers['HTTP-Referer'] = 'https://github.com/HealthAI';
+    request.headers['X-Title'] = 'HealthAI Coach';
+    request.headers['Content-Type'] = 'application/json';
+    request.headers['Accept'] = 'text/event-stream';
+    request.body = jsonEncode({
+      'model': modelId,
+      'messages': _buildHfMessages(),
+      'max_tokens': 3000,
+      'temperature': 0.7,
+      'stream': true,
+    });
+
+    final streamedResponse =
+        await http.Client().send(request).timeout(const Duration(seconds: 90));
+
+    debugPrint('[OR stream] $modelId → ${streamedResponse.statusCode}');
+
+    if (streamedResponse.statusCode == 200) {
+      final byteStream = streamedResponse.stream;
+      final lines = byteStream
+          .transform(const Utf8Decoder())
+          .transform(const LineSplitter());
+
+      await for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final raw = line.substring(6).trim();
+          if (raw == '[DONE]') break;
+          try {
+            final json = jsonDecode(raw) as Map<String, dynamic>;
+            final delta = json['choices']?[0]?['delta']?['content'] as String?;
+            if (delta != null && delta.isNotEmpty) {
+              yield delta;
+            }
+          } catch (_) {}
+        }
+      }
+    } else {
+      final body = await streamedResponse.stream.transform(const Utf8Decoder()).join();
+      if (_isFallbackError(streamedResponse.statusCode, body)) {
+        yield '__FALLBACK_TRIGGER__';
+      } else {
+        yield '__ERROR__: ${streamedResponse.statusCode}';
+      }
+    }
+  }
+
+  // ─── Internal Gemini Implementations ────────────────────────────────────────
+
+  Future<String?> _sendGeminiMessage(String modelId) async {
+    if (_geminiKey.isEmpty) throw Exception('GEMINI_API_KEY missing');
+
+    final model = gemini.GenerativeModel(
+      model: modelId,
+      apiKey: _geminiKey,
+      systemInstruction: gemini.Content.system(
+          _kSystemPrompt + (_userContext != null ? '\n\nUser Health Context:\n$_userContext' : '')),
+    );
+
+    final contents = _history.map((m) => gemini.Content(
+        m['role'] == 'user' ? 'user' : 'model', [gemini.TextPart(m['content']!)])).toList();
+
+    debugPrint('[Gemini chat] $modelId request...');
+    final response = await model.generateContent(contents);
+    return response.text;
+  }
+
+  Stream<String> _streamGeminiMessage(String modelId) async* {
+    if (_geminiKey.isEmpty) throw Exception('GEMINI_API_KEY missing');
+
+    final model = gemini.GenerativeModel(
+      model: modelId,
+      apiKey: _geminiKey,
+      systemInstruction: gemini.Content.system(
+          _kSystemPrompt + (_userContext != null ? '\n\nUser Health Context:\n$_userContext' : '')),
+    );
+
+    final contents = _history.map((m) => gemini.Content(
+        m['role'] == 'user' ? 'user' : 'model', [gemini.TextPart(m['content']!)])).toList();
+
+    debugPrint('[Gemini stream] $modelId request...');
+    final stream = model.generateContentStream(contents);
+    await for (final chunk in stream) {
+      if (chunk.text != null && chunk.text!.isNotEmpty) {
+        yield chunk.text!;
+      }
+    }
+  }
+
+  Future<String?> _analyzeFoodImageGemini(List<int> bytes, String mimeType, String modelId) async {
+    if (_geminiKey.isEmpty) throw Exception('GEMINI_API_KEY missing');
+
+    final model = gemini.GenerativeModel(
+      model: modelId,
+      apiKey: _geminiKey,
+      generationConfig: gemini.GenerationConfig(temperature: 0.1),
+    );
+
+    final content = gemini.Content.multi([
+      gemini.TextPart('$_kVisionSystemPrompt\nAnalyze this food image and return the nutritional info as JSON.'),
+      gemini.DataPart(mimeType, Uint8List.fromList(bytes)),
+    ]);
+
+    debugPrint('[Gemini vision] $modelId request...');
+    final response = await model.generateContent([content]);
+    return response.text;
+  }
+
+  // ─── Internal Hugging Face Implementations ──────────────────────────────────
+
+  List<Map<String, String>> _buildHfMessages() {
+    return [
+      {'role': 'system', 'content': _kSystemPrompt},
+      if (_userContext != null) {'role': 'system', 'content': _userContext!},
+      ..._history,
+    ];
+  }
+
+  Future<String?> _sendHfMessage(String modelId) async {
+    if (_hfToken.isEmpty) throw Exception('HF_TOKEN missing');
+    final response = await http.post(
+      Uri.parse(_kHfRouterUrl),
+      headers: {
+        'Authorization': 'Bearer $_hfToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': modelId,
+        'messages': _buildHfMessages(),
+        'max_tokens': 3000,
+        'temperature': 0.7,
+        'stream': false,
+      }),
+    );
+
+    debugPrint('[HF chat] $modelId → ${response.statusCode}');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'] as String? ?? '';
+    } else if (_isFallbackError(response.statusCode, response.body)) {
+      throw Exception('HF Quota or Rate Limit hit');
+    } else {
+      debugPrint('[HF chat] $modelId error: ${response.body}');
+      throw Exception('HF Error: ${response.statusCode}');
+    }
+  }
+
+  Stream<String> _streamHfMessage(String modelId) async* {
+    if (_hfToken.isEmpty) {
+      yield '__FALLBACK_TRIGGER__';
+      return;
+    }
+    final request = http.Request('POST', Uri.parse(_kHfRouterUrl));
+    request.headers['Authorization'] = 'Bearer $_hfToken';
+    request.headers['Content-Type'] = 'application/json';
+    request.headers['Accept'] = 'text/event-stream';
+    request.body = jsonEncode({
+      'model': modelId,
+      'messages': _buildHfMessages(),
+      'max_tokens': 3000,
+      'temperature': 0.7,
+      'stream': true,
+    });
+
+    final streamedResponse =
+        await http.Client().send(request).timeout(const Duration(seconds: 90));
+
+    debugPrint('[HF stream] $modelId → ${streamedResponse.statusCode}');
+
+    if (streamedResponse.statusCode == 200) {
+      final byteStream = streamedResponse.stream;
+      final lines = byteStream
+          .transform(const Utf8Decoder())
+          .transform(const LineSplitter());
+
+      await for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final raw = line.substring(6).trim();
+          if (raw == '[DONE]') break;
+          try {
+            final json = jsonDecode(raw) as Map<String, dynamic>;
+            final delta = json['choices']?[0]?['delta']?['content'] as String?;
+            if (delta != null && delta.isNotEmpty) {
+              yield delta;
+            }
+          } catch (_) {}
+        }
+      }
+    } else {
+      final body = await streamedResponse.stream.transform(const Utf8Decoder()).join();
+      if (_isFallbackError(streamedResponse.statusCode, body)) {
+        yield '__FALLBACK_TRIGGER__';
+      } else {
+        yield '__ERROR__: ${streamedResponse.statusCode}';
+      }
+    }
+  }
+
+  Future<String?> _analyzeFoodImageHf(List<int> bytes, String mimeType, String modelId) async {
+    if (_hfToken.isEmpty) throw Exception('HF_TOKEN missing');
     final base64Image = base64Encode(bytes);
     final dataUri = 'data:$mimeType;base64,$base64Image';
 
     final messages = [
-      {
-        'role': 'system',
-        'content': _kVisionSystemPrompt,
-      },
+      {'role': 'system', 'content': _kVisionSystemPrompt},
       {
         'role': 'user',
         'content': [
           {
             'type': 'text',
-            'text':
-                'Analyze this food image and return the nutritional info as JSON.',
+            'text': 'Analyze this food image and return the nutritional info as JSON.',
           },
           {
             'type': 'image_url',
@@ -464,45 +686,29 @@ class AIService {
       },
     ];
 
-    while (_visionModelIndex < _kHfVisionModels.length) {
-      final model = _kHfVisionModels[_visionModelIndex];
-      try {
-        final response = await http.post(
-          Uri.parse(_kHfRouterUrl),
-          headers: {
-            'Authorization': 'Bearer $_hfToken',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'model': model,
-            'messages': messages,
-            'max_tokens': 256,
-            'temperature': 0.1,
-            'stream': false,
-          }),
-        );
+    final response = await http.post(
+      Uri.parse(_kHfRouterUrl),
+      headers: {
+        'Authorization': 'Bearer $_hfToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'model': modelId,
+        'messages': messages,
+        'max_tokens': 256,
+        'temperature': 0.1,
+        'stream': false,
+      }),
+    );
 
-        debugPrint('[HF vision] $model → ${response.statusCode}');
+    debugPrint('[HF vision] $modelId → ${response.statusCode}');
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final content =
-              data['choices'][0]['message']['content'] as String? ?? '';
-          return content;
-        } else if (_isHfFallbackError(response.statusCode, response.body)) {
-          debugPrint('[HF vision] $model rate-limited, falling back');
-          _advanceVisionModel();
-          continue;
-        } else {
-          debugPrint('[HF vision] $model error: ${response.body}');
-          return null;
-        }
-      } catch (e) {
-        debugPrint('[HF vision] $model exception: $e');
-        return null;
-      }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['choices'][0]['message']['content'] as String? ?? '';
+    } else if (_isFallbackError(response.statusCode, response.body)) {
+      throw Exception('HF quota exceeded');
     }
-
-    return null; // all vision models exhausted
+    return null;
   }
 }

@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import 'package:health_app/src/theme/theme_provider.dart';
 import '../../profile/application/user_provider.dart';
 import '../../../services/notification_service.dart';
@@ -83,7 +84,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           _SettingsAppBar(isDark: isDark),
           SliverPadding(
@@ -166,7 +167,7 @@ class _SettingsAppBar extends ConsumerWidget {
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(height: 1,
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05)),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05)),
       ),
     );
   }
@@ -180,9 +181,9 @@ class _NavBtn extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 36, height: 36,
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(isDark ? 0.08 : 0.85),
+      color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.85),
       shape: BoxShape.circle,
-      border: Border.all(color: Colors.white.withOpacity(isDark ? 0.1 : 0.3)),
+      border: Border.all(color: Colors.white.withValues(alpha: isDark ? 0.1 : 0.3)),
     ),
     child: Icon(icon,
         color: isDark ? Colors.white70 : AppColors.lightTextPrimary, size: 17),
@@ -444,16 +445,17 @@ class _HealthDataSection extends ConsumerWidget {
       ),
       _SDivider(),
       _ActionTile(
-        icon: isExporting ? PhosphorIconsFill.hourglass : PhosphorIconsFill.export,
-        color: Colors.blueGrey,
+        icon: isExporting ? PhosphorIconsFill.hourglass : PhosphorIconsFill.filePdf,
+        color: AppColors.danger,
         label: 'Export Health Data',
-        subtitle: isExporting ? 'Preparing CSV files…' : 'Share as CSV (last 30 days)',
+        subtitle: isExporting ? 'Generating PDF report…' : 'Share PDF report (last 30 days)',
         onTap: isExporting ? () {} : () async {
           _haptic(ref);
           ref.read(_exportLoadingProvider.notifier).state = true;
           try {
             final isar = ref.read(isarProvider);
-            await DataExportService.exportAndShare(isar);
+            final user = ref.read(userProvider);
+            await DataExportService.exportPdfAndShare(isar, user);
           } catch (e) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -604,10 +606,10 @@ class _PrivacySection extends ConsumerWidget {
         }
         return;
       }
-      final authenticated = await auth.authenticate(
-        localizedReason: 'Confirm biometrics to enable lock',
-        options: const AuthenticationOptions(biometricOnly: true),
-      );
+        final authenticated = await auth.authenticate(
+          localizedReason: 'Confirm biometrics to enable lock',
+          options: const AuthenticationOptions(biometricOnly: true),
+        );
       if (!authenticated) return;
     }
     await _setPref('biometric_lock_enabled', enable);
@@ -761,10 +763,10 @@ class _SCard extends StatelessWidget {
         color: isDark ? AppColors.charcoalGlass : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04)),
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
               blurRadius: 16, offset: const Offset(0, 4)),
         ],
       ),
@@ -786,7 +788,7 @@ class _SHeader extends StatelessWidget {
         Container(
           width: 30, height: 30,
           decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 15),
         ),
@@ -794,7 +796,7 @@ class _SHeader extends StatelessWidget {
         Text(label, style: TextStyle(
             fontSize: 13, fontWeight: FontWeight.bold,
             letterSpacing: 0.2,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.75))),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75))),
       ]),
     );
   }
@@ -804,7 +806,7 @@ class _SDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Divider(
     height: 0, indent: 56, thickness: 0.5,
-    color: Theme.of(context).dividerColor.withOpacity(0.06),
+    color: Theme.of(context).dividerColor.withValues(alpha: 0.06),
   );
 }
 
@@ -817,7 +819,7 @@ class _RowLabel extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 16),
     child: Text(label, style: TextStyle(
         fontSize: 13, fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
   );
 }
 
@@ -841,33 +843,35 @@ class _SegmentedRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.06) : AppColors.cloudGray,
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.cloudGray,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(children: items.asMap().entries.map((e) {
-          final isSelected = e.key == selected;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () { HapticFeedback.selectionClick(); onSelected(e.key); },
-              child: AnimatedContainer(
+          child: Row(children: items.asMap().entries.map((e) {
+            final isSelected = e.key == selected;
+            return Expanded(
+              child: AppAnimatedPressable(
+                onTap: () { HapticFeedback.selectionClick(); onSelected(e.key); },
+                pressScale: 0.94,
+                haptic: HapticFeedbackType.none,
+                child: AnimatedContainer(
                 duration: 200.ms,
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
                   color: isSelected ? active : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: isSelected ? [
-                    BoxShadow(color: active.withOpacity(0.3), blurRadius: 8)
+                    BoxShadow(color: active.withValues(alpha: 0.3), blurRadius: 8)
                   ] : null,
                 ),
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(icons[e.key],
-                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       size: 13),
                   const SizedBox(width: 5),
                   Text(e.value, style: TextStyle(
                       fontSize: 12, fontWeight: FontWeight.bold,
                       color: isSelected ? Colors.white
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                 ]),
               ),
             ),
@@ -900,7 +904,7 @@ class _ToggleTile extends StatelessWidget {
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 18),
           ),
@@ -908,7 +912,7 @@ class _ToggleTile extends StatelessWidget {
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             Text(subtitle, style: TextStyle(fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45))),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45))),
           ])),
           Switch.adaptive(
             value: value,
@@ -921,7 +925,7 @@ class _ToggleTile extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatefulWidget {
+class _ActionTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String label, subtitle;
@@ -931,41 +935,32 @@ class _ActionTile extends StatefulWidget {
     required this.label, required this.subtitle, required this.onTap,
   });
   @override
-  State<_ActionTile> createState() => _ActionTileState();
-}
-class _ActionTileState extends State<_ActionTile> {
-  bool _pressed = false;
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) { setState(() => _pressed = false); widget.onTap(); },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedOpacity(
-        opacity: _pressed ? 0.6 : 1.0, duration: 100.ms,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                  color: widget.color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Icon(widget.icon, color: widget.color, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(widget.label,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                      color: widget.color == AppColors.danger ? widget.color : null)),
-              Text(widget.subtitle, style: TextStyle(fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45))),
-            ])),
-            Icon(PhosphorIconsRegular.caretRight, size: 15,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.25)),
-          ]),
-        ),
+    return AppAnimatedPressable(
+      onTap: onTap,
+      pressScale: 0.98,
+      haptic: HapticFeedbackType.light,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label,
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                    color: color == AppColors.danger ? color : null)),
+            Text(subtitle, style: TextStyle(fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45))),
+          ])),
+          Icon(PhosphorIconsRegular.caretRight, size: 15,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25)),
+        ]),
       ),
     );
   }
@@ -990,7 +985,7 @@ class _InfoTile extends StatelessWidget {
         Container(
           width: 36, height: 36,
           decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10)),
           child: Icon(icon, color: color, size: 18),
         ),
@@ -999,7 +994,7 @@ class _InfoTile extends StatelessWidget {
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
         Text(value, style: TextStyle(
             fontSize: 13, fontWeight: FontWeight.w600,
-            color: valueColor ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+            color: valueColor ?? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
       ]),
     );
   }

@@ -26,12 +26,9 @@ class GemmaSetupScreen extends ConsumerWidget {
           specs: DeviceSpecs(ramGb: 4, chipset: 'Unknown', tier: DeviceTier.mid),
         ),
         data: (specs) {
-          // Show a clear, permanent "not supported" screen on emulators.
-          // The flutter_gemma native library crashes with SIGILL on any emulator
-          // because it probes for ARM SME2 instructions the emulator doesn't have.
-          if (specs.isEmulator) {
-            return _EmulatorNotSupportedScreen();
-          }
+          // Note: We bypass the emulator block here to allow testing the UI.
+          // The underlying initializeModel call will still block the emulator
+          // to prevent the SIGILL crash.
           return _SetupBody(
             modelState: modelState,
             selectedModel: selectedModel,
@@ -245,9 +242,9 @@ class _DeviceTierChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -292,7 +289,7 @@ class _Hero extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    const Color(0xFF4A90D9).withOpacity(0.25),
+                    const Color(0xFF4A90D9).withValues(alpha: 0.25),
                     Colors.transparent,
                   ],
                 ),
@@ -310,7 +307,7 @@ class _Hero extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF4A90D9).withOpacity(0.4),
+                    color: const Color(0xFF4A90D9).withValues(alpha: 0.4),
                     blurRadius: 28,
                     spreadRadius: 2,
                   ),
@@ -367,9 +364,9 @@ class _ModelList extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
         children: ranked.asMap().entries.map((entry) {
@@ -397,7 +394,7 @@ class _ModelList extends ConsumerWidget {
               if (!isLast)
                 Divider(
                   height: 1,
-                  color: Colors.white.withOpacity(0.05),
+                  color: Colors.white.withValues(alpha: 0.05),
                   indent: 56,
                 ),
             ],
@@ -449,7 +446,7 @@ class _ModelTile extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.dynamicMint.withOpacity(0.07)
+                ? AppColors.dynamicMint.withValues(alpha: 0.07)
                 : Colors.transparent,
             borderRadius: BorderRadius.vertical(
               top: isFirst ? const Radius.circular(20) : Radius.zero,
@@ -556,9 +553,9 @@ class _Badge extends StatelessWidget {
       padding: EdgeInsets.symmetric(
           horizontal: small ? 5 : 7, vertical: small ? 2 : 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Text(
         label,
@@ -594,9 +591,9 @@ class _ModelInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
         children: [
@@ -654,7 +651,7 @@ class _InfoRow extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: Colors.grey.shade400, size: 15),
@@ -703,9 +700,9 @@ class _StatusSection extends ConsumerWidget {
       GemmaModelStatus.error => Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.red.withOpacity(0.25)),
+            border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
           ),
           child: Row(
             children: [
@@ -756,7 +753,7 @@ class _DownloadProgress extends StatelessWidget {
           child: LinearProgressIndicator(
             value: state.progress,
             minHeight: 8,
-            backgroundColor: Colors.white.withOpacity(0.07),
+            backgroundColor: Colors.white.withValues(alpha: 0.07),
             valueColor:
                 const AlwaysStoppedAnimation<Color>(AppColors.dynamicMint),
           ),
@@ -834,7 +831,7 @@ class _ActionButton extends ConsumerWidget {
                 style: TextStyle(color: Colors.white38)),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(color: Colors.white.withOpacity(0.08)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
             ),
@@ -894,7 +891,7 @@ class _GradientButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),

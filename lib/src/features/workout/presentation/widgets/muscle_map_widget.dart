@@ -199,7 +199,7 @@ class _MuscleMapWidgetState extends State<MuscleMapWidget>
                 border: Border.all(color: const Color(0xFF2A2A4A), width: 1),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.primaryColor.withOpacity(0.08),
+                    color: widget.primaryColor.withValues(alpha: 0.08),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -284,7 +284,7 @@ class _MuscleLabels extends StatelessWidget {
       alignment: WrapAlignment.center,
       children: [
         ...primary.map((m) => _label(m, primaryColor, filled: true)),
-        ...secondary.map((m) => _label(m, primaryColor.withOpacity(0.5), filled: false)),
+        ...secondary.map((m) => _label(m, primaryColor.withValues(alpha: 0.5), filled: false)),
       ],
     );
   }
@@ -293,9 +293,9 @@ class _MuscleLabels extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: filled ? color.withOpacity(0.15) : Colors.transparent,
+        color: filled ? color.withValues(alpha: 0.15) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.6), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 1),
       ),
       child: Text(
         name.toUpperCase(),

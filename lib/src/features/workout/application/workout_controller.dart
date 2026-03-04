@@ -119,13 +119,10 @@ class WorkoutController extends Notifier<WorkoutDoc?> {
     // ~5 kcal/min is a reasonable moderate-intensity estimate
     final estimatedKcal = (exerciseMinutes * 5).clamp(0, 9999);
 
-    dailyNotifier.addExercise(minutes: exerciseMinutes, caloriesBurned: estimatedKcal);
+      dailyNotifier.addExercise(minutes: exerciseMinutes, caloriesBurned: estimatedKcal);
 
-    // Invalidate dashboard to redraw rings
-    ref.invalidate(dailyActivityProvider);
-
-    // Clear active session
-    state = null;
+      // Clear active session
+      state = null;
   }
 
   void _updatePRs(dynamic db, List<WorkoutExercise> exercises) {

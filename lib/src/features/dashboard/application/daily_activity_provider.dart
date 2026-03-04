@@ -9,8 +9,7 @@ final dailyActivityProvider = NotifierProvider<DailyActivityNotifier, DailyLogDo
 class DailyActivityNotifier extends Notifier<DailyLogDoc> {
   @override
   DailyLogDoc build() {
-    _initToday();
-    return DailyLogDoc()..date = _startOfToday();
+    return _loadOrCreateToday();
   }
 
   Isar get _db => ref.read(isarProvider);
@@ -20,35 +19,32 @@ class DailyActivityNotifier extends Notifier<DailyLogDoc> {
     return DateTime(now.year, now.month, now.day);
   }
 
-  void _initToday() {
+  DailyLogDoc _loadOrCreateToday() {
     final today = _startOfToday();
     final existing = _db.dailyLogDocs.where().dateEqualTo(today).findFirstSync();
+    if (existing != null) return existing;
 
-    if (existing != null) {
-      state = existing;
-    } else {
-      final newDay = DailyLogDoc()
+    final newDay = DailyLogDoc()
         ..date = today
-        ..caloriesBurned = 450
+        ..caloriesBurned = 0
         ..caloriesBurnedGoal = 600
         ..exerciseGoalMinutes = 45
-        ..exerciseCompletedMinutes = 20
+        ..exerciseCompletedMinutes = 0
         ..standGoalHours = 12
-        ..standCompletedHours = 7
-        ..proteinGrams = 85
-        ..carbsGrams = 150
-        ..fatGrams = 45
-        ..caloriesConsumed = 1200
-        ..waterMl = 1200
+        ..standCompletedHours = 0
+        ..proteinGrams = 0
+        ..carbsGrams = 0
+        ..fatGrams = 0
+        ..caloriesConsumed = 0
+        ..waterMl = 0
         ..waterGoalMl = 2500
-        ..sleepMinutes = 450
-        ..stepCount = 4500;
+        ..sleepMinutes = 0
+        ..stepCount = 0;
 
-      _db.writeTxnSync(() {
-        _db.dailyLogDocs.putSync(newDay);
-      });
-      state = newDay;
-    }
+    _db.writeTxnSync(() {
+      _db.dailyLogDocs.putSync(newDay);
+    });
+    return newDay;
   }
 
   void _persist() {
@@ -77,12 +73,16 @@ class DailyActivityNotifier extends Notifier<DailyLogDoc> {
     _persist();
   }
 
-  void addExercise({required int minutes, required int caloriesBurned}) {
-    state = _clone(state)
-      ..exerciseCompletedMinutes = state.exerciseCompletedMinutes + minutes
-      ..caloriesBurned = state.caloriesBurned + caloriesBurned;
-    _persist();
-  }
+    void addExercise({required int minutes, required int caloriesBurned}) {
+      final newExerciseMinutes = state.exerciseCompletedMinutes + minutes;
+      // Derive stand hours: each 30 min of accumulated exercise = 1 stand hour (max = standGoalHours)
+      final derivedStandHours = (newExerciseMinutes / 30).floor().clamp(0, state.standGoalHours);
+      state = _clone(state)
+        ..exerciseCompletedMinutes = newExerciseMinutes
+        ..caloriesBurned = state.caloriesBurned + caloriesBurned
+        ..standCompletedHours = derivedStandHours;
+      _persist();
+    }
 
   void updateSleep(int minutes) {
     state = _clone(state)..sleepMinutes = minutes;
@@ -91,15 +91,15 @@ class DailyActivityNotifier extends Notifier<DailyLogDoc> {
 
   void addMeal({required int calories, required int protein, required int carbs, required int fat}) {
     state = _clone(state)
-      ..caloriesConsumed = state.caloriesConsumed + calories
-      ..proteinGrams = state.proteinGrams + protein
-      ..carbsGrams = state.carbsGrams + carbs
-      ..fatGrams = state.fatGrams + fat;
+      ..caloriesConsumed = (state.caloriesConsumed + calories).clamp(0, 99999)
+      ..proteinGrams = (state.proteinGrams + protein).clamp(0, 9999)
+      ..carbsGrams = (state.carbsGrams + carbs).clamp(0, 9999)
+      ..fatGrams = (state.fatGrams + fat).clamp(0, 9999);
     _persist();
   }
 
-  /// Sync real steps + sleep from HealthKit / Health Connect.
-  /// Only updates values that are larger than current (health data is authoritative).
+  /// Sync all vitals from HealthKit / Health Connect.
+  /// Health data is authoritative — always takes the max value.
   Future<void> syncFromHealth() async {
     try {
       final service = ref.read(healthServiceProvider);
@@ -119,6 +119,17 @@ class DailyActivityNotifier extends Notifier<DailyLogDoc> {
       }
       if (snapshot.activeCaloriesBurned > updated.caloriesBurned) {
         updated.caloriesBurned = snapshot.activeCaloriesBurned;
+        changed = true;
+      }
+      // Sync exercise minutes from health (max of manual + health data)
+      if (snapshot.exerciseMinutes > updated.exerciseCompletedMinutes) {
+        updated.exerciseCompletedMinutes = snapshot.exerciseMinutes;
+        changed = true;
+      }
+      // Sync stand hours from health data (capped at goal)
+      final healthStand = snapshot.standHours.clamp(0, updated.standGoalHours);
+      if (healthStand > updated.standCompletedHours) {
+        updated.standCompletedHours = healthStand;
         changed = true;
       }
 

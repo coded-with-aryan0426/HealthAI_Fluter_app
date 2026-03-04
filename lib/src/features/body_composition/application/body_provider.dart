@@ -19,7 +19,7 @@ class BodyEntriesNotifier extends Notifier<List<BodyEntryDoc>> {
 
   @override
   List<BodyEntryDoc> build() {
-    _load();
+    Future.microtask(_load);
     return [];
   }
 

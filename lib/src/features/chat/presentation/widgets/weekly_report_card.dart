@@ -148,8 +148,8 @@ class WeeklyReportCard extends ConsumerWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.softIndigo.withOpacity(isDark ? 0.4 : 0.15),
-                  AppColors.dynamicMint.withOpacity(isDark ? 0.2 : 0.08),
+                  AppColors.softIndigo.withValues(alpha: isDark ? 0.4 : 0.15),
+                  AppColors.dynamicMint.withValues(alpha: isDark ? 0.2 : 0.08),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -183,7 +183,7 @@ class WeeklyReportCard extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -251,10 +251,10 @@ class WeeklyReportCard extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.softIndigo.withOpacity(isDark ? 0.1 : 0.06),
+                    color: AppColors.softIndigo.withValues(alpha: isDark ? 0.1 : 0.06),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: AppColors.softIndigo.withOpacity(0.15),
+                      color: AppColors.softIndigo.withValues(alpha: 0.15),
                     ),
                   ),
                   child: Column(
@@ -281,7 +281,7 @@ class WeeklyReportCard extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
-                          color: isDark ? Colors.white.withOpacity(0.85) : Colors.black87,
+                          color: isDark ? Colors.white.withValues(alpha: 0.85) : Colors.black87,
                         ),
                       ),
                     ],
@@ -311,10 +311,10 @@ class WeeklyReportCard extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(isDark ? 0.1 : 0.08),
+                    color: AppColors.dynamicMint.withValues(alpha: isDark ? 0.1 : 0.08),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: AppColors.dynamicMint.withOpacity(0.3),
+                      color: AppColors.dynamicMint.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -346,7 +346,7 @@ class WeeklyReportCard extends ConsumerWidget {
                                 fontSize: 13,
                                 height: 1.4,
                                 color: isDark
-                                    ? Colors.white.withOpacity(0.85)
+                                    ? Colors.white.withValues(alpha: 0.85)
                                     : Colors.black87,
                               ),
                             ),
@@ -386,12 +386,12 @@ class WeeklyReportCard extends ConsumerWidget {
       borderRadius: BorderRadius.circular(20),
       border: Border.all(
         color: isDark
-            ? AppColors.softIndigo.withOpacity(0.2)
-            : AppColors.softIndigo.withOpacity(0.1),
+            ? AppColors.softIndigo.withValues(alpha: 0.2)
+            : AppColors.softIndigo.withValues(alpha: 0.1),
       ),
       boxShadow: [
         BoxShadow(
-          color: AppColors.softIndigo.withOpacity(0.08),
+          color: AppColors.softIndigo.withValues(alpha: 0.08),
           blurRadius: 20,
           offset: const Offset(0, 6),
         ),
@@ -424,9 +424,9 @@ class _StatCell extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.12 : 0.08),
+          color: color.withValues(alpha: isDark ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -480,7 +480,6 @@ class _BulletRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPositive ? AppColors.dynamicMint : Colors.orange;
     final icon = isPositive ? '✅' : '⚠️';
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -495,7 +494,7 @@ class _BulletRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 height: 1.4,
-                color: isDark ? Colors.white.withOpacity(0.8) : Colors.black87,
+                color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black87,
               ),
             ),
           ),

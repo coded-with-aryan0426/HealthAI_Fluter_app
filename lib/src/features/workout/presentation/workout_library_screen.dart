@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import 'package:health_app/src/theme/app_colors.dart';
 import '../../../services/local_db_service.dart';
 import '../../../database/models/workout_plan_doc.dart';
@@ -66,26 +67,29 @@ class _WorkoutLibraryScreenState
               elevation: 0,
               scrolledUnderElevation: 0,
               automaticallyImplyLeading: false,
-              leading: context.canPop()
-                  ? IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : Colors.black.withValues(alpha: 0.05),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(PhosphorIconsRegular.arrowLeft,
-                            color: isDark ? Colors.white : AppColors.lightTextPrimary,
-                            size: 18),
+                leading: IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.05),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: () => context.pop(),
-                    )
-                  : null,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: EdgeInsets.fromLTRB(
-                    context.canPop() ? 56 : 16, 0, 16, 52),
+                      child: Icon(PhosphorIconsRegular.arrowLeft,
+                          color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                          size: 18),
+                    ),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/dashboard');
+                      }
+                    },
+                  ),
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.fromLTRB(56, 0, 16, 52),
                 title: Text(
                   'Workout',
                   style: TextStyle(
@@ -212,12 +216,9 @@ class _PlanCard extends ConsumerWidget {
     final totalSets =
         plan.exercises.fold(0, (sum, e) => sum + e.sets);
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push('/workout/preview', extra: plan);
-      },
-      child: Container(
+      return AppAnimatedPressable(
+        onTap: () => context.push('/workout/preview', extra: plan),
+        child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -300,23 +301,21 @@ class _PlanCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Start button
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                context.push('/workout', extra: plan);
-              },
-              child: Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: accent.withValues(alpha: 0.3)),
+              // Start button
+              AppAnimatedPressable(
+                onTap: () => context.push('/workout', extra: plan),
+                haptic: HapticFeedbackType.medium,
+                child: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: accent.withValues(alpha: 0.3)),
+                  ),
+                  child: Icon(PhosphorIconsFill.play,
+                      color: accent, size: 20),
                 ),
-                child: Icon(PhosphorIconsFill.play,
-                    color: accent, size: 20),
               ),
-            ),
           ],
         ),
       ),
@@ -393,7 +392,7 @@ class _ProgramsTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          GestureDetector(
+          AppAnimatedPressable(
             onTap: () => context.push('/workout/programs'),
             child: Container(
               padding: const EdgeInsets.symmetric(

@@ -66,11 +66,11 @@ class _MealPlanCardState extends State<MealPlanCard> {
         color: isDark ? const Color(0xFF13151F) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppColors.dynamicMint.withOpacity(isDark ? 0.2 : 0.15),
+          color: AppColors.dynamicMint.withValues(alpha: isDark ? 0.2 : 0.15),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.dynamicMint.withOpacity(0.08),
+            color: AppColors.dynamicMint.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -97,11 +97,11 @@ class _MealPlanCardState extends State<MealPlanCard> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(0.2),
+                    color: AppColors.dynamicMint.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.dynamicMint.withOpacity(0.3),
+                        color: AppColors.dynamicMint.withValues(alpha: 0.3),
                         blurRadius: 10,
                       ),
                     ],
@@ -141,7 +141,7 @@ class _MealPlanCardState extends State<MealPlanCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: AppColors.dynamicMint.withOpacity(0.15),
+                      color: AppColors.dynamicMint.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -180,7 +180,7 @@ class _MealPlanCardState extends State<MealPlanCard> {
                       decoration: BoxDecoration(
                         color: sel
                             ? AppColors.dynamicMint
-                            : AppColors.dynamicMint.withOpacity(0.08),
+                            : AppColors.dynamicMint.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -230,17 +230,17 @@ class _MealPlanCardState extends State<MealPlanCard> {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.04)
-                        : color.withOpacity(0.05),
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : color.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: color.withOpacity(0.15)),
+                    border: Border.all(color: color.withValues(alpha: 0.15)),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
+                          color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(icon, color: color, size: 16),
@@ -291,8 +291,8 @@ class _MealPlanCardState extends State<MealPlanCard> {
                             style: TextStyle(
                               fontSize: 10,
                               color: isDark
-                                  ? Colors.white.withOpacity(0.35)
-                                  : Colors.black.withOpacity(0.35),
+                                  ? Colors.white.withValues(alpha: 0.35)
+                                  : Colors.black.withValues(alpha: 0.35),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -322,14 +322,14 @@ class _MacroChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
             Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
-            Text(label, style: TextStyle(color: color.withOpacity(0.6), fontSize: 9, fontWeight: FontWeight.w700)),
+            Text(label, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 9, fontWeight: FontWeight.w700)),
           ],
         ),
       ),

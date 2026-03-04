@@ -9,6 +9,7 @@ import '../application/weekly_stats_provider.dart';
 import '../application/weekly_insight_provider.dart';
 import '../../../database/models/daily_log_doc.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../../../features/profile/application/user_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,18 +115,18 @@ class WeeklyOverviewScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           // ── Header ──────────────────────────────────────────────────────────
           SliverAppBar(
             pinned: true,
             expandedHeight: 0,
             backgroundColor: isDark
-                ? AppColors.deepObsidian.withOpacity(0.88)
-                : Colors.white.withOpacity(0.88),
+                ? AppColors.deepObsidian.withValues(alpha: 0.88)
+                : Colors.white.withValues(alpha: 0.88),
             elevation: 0,
             scrolledUnderElevation: 0,
-            leading: GestureDetector(
+            leading: AppAnimatedPressable(
               onTap: () {
                 HapticFeedback.lightImpact();
                 Navigator.of(context).pop();
@@ -134,8 +135,8 @@ class WeeklyOverviewScreen extends ConsumerWidget {
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Colors.white.withOpacity(0.07)
-                      : Colors.black.withOpacity(0.05),
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -347,7 +348,7 @@ class _SummaryTilesRow extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         children: [
           _SummaryChip(
             label: 'Workouts',
@@ -422,11 +423,11 @@ class _SummaryChip extends StatelessWidget {
         color: isDark ? AppColors.charcoalGlass : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withOpacity(isDark ? 0.18 : 0.12),
+          color: color.withValues(alpha: isDark ? 0.18 : 0.12),
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.07),
+            color: color.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -446,7 +447,7 @@ class _SummaryChip extends StatelessWidget {
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
-                  color: color.withOpacity(0.75),
+                  color: color.withValues(alpha: 0.75),
                 ),
               ),
             ],
@@ -533,11 +534,11 @@ class _SparklineCard extends StatelessWidget {
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: color.withOpacity(isDark ? 0.15 : 0.08),
+            color: color.withValues(alpha: isDark ? 0.15 : 0.08),
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.06),
+              color: color.withValues(alpha: 0.06),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
@@ -552,7 +553,7 @@ class _SparklineCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: color, size: 16),
@@ -564,7 +565,7 @@ class _SparklineCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.0,
-                    color: color.withOpacity(0.85),
+                    color: color.withValues(alpha: 0.85),
                   ),
                 ),
                 const Spacer(),
@@ -670,7 +671,7 @@ class _SparklineCard extends StatelessWidget {
                       ? goal.toStringAsFixed(0)
                       : goal.toStringAsFixed(0),
                   unit: unitLabel,
-                  color: color.withOpacity(0.5),
+                  color: color.withValues(alpha: 0.5),
                   isDark: isDark,
                 ),
                 const Spacer(),
@@ -680,7 +681,7 @@ class _SparklineCard extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
+                      color: color.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -729,7 +730,7 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -857,7 +858,7 @@ class _SparklinePainter extends CustomPainter {
       final top = h - barH;
 
       final isAboveGoal = values[i] >= goal;
-      final barColor = isAboveGoal ? color : color.withOpacity(0.25);
+      final barColor = isAboveGoal ? color : color.withValues(alpha: 0.25);
 
       final rRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, top, barW, barH),
@@ -874,7 +875,7 @@ class _SparklinePainter extends CustomPainter {
         canvas.drawRRect(
           rRect,
           Paint()
-            ..color = color.withOpacity(0.25)
+            ..color = color.withValues(alpha: 0.25)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
         );
       }
@@ -885,7 +886,7 @@ class _SparklinePainter extends CustomPainter {
     final goalY = h - goalFraction * h * 0.75;
 
     final dashPaint = Paint()
-      ..color = color.withOpacity(0.45)
+      ..color = color.withValues(alpha: 0.45)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
 
@@ -916,7 +917,7 @@ class _SparklinePainter extends CustomPainter {
     canvas.clipRect(Rect.fromLTWH(0, 0, clipW, h));
 
     final linePaint = Paint()
-      ..color = color.withOpacity(0.7)
+      ..color = color.withValues(alpha: 0.7)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -1001,10 +1002,10 @@ class _PrTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.charcoalGlass : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(isDark ? 0.18 : 0.1)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.18 : 0.1)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.07),
+            color: color.withValues(alpha: 0.07),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -1019,7 +1020,7 @@ class _PrTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(entry.icon, color: color, size: 14),
@@ -1032,7 +1033,7 @@ class _PrTile extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.6,
-                    color: color.withOpacity(0.75),
+                    color: color.withValues(alpha: 0.75),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1114,11 +1115,11 @@ class _SummaryCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppColors.softIndigo.withOpacity(isDark ? 0.25 : 0.15),
+          color: AppColors.softIndigo.withValues(alpha: isDark ? 0.25 : 0.15),
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.softIndigo.withOpacity(0.08),
+            color: AppColors.softIndigo.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -1141,7 +1142,7 @@ class _SummaryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.softIndigo.withOpacity(0.4),
+                      color: AppColors.softIndigo.withValues(alpha: 0.4),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -1153,7 +1154,7 @@ class _SummaryCard extends StatelessWidget {
                   .animate(onPlay: (c) => c.repeat(reverse: true))
                   .shimmer(
                       duration: 2200.ms,
-                      color: Colors.white.withOpacity(0.3)),
+                      color: Colors.white.withValues(alpha: 0.3)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1165,7 +1166,7 @@ class _SummaryCard extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.4,
-                        color: AppColors.softIndigo.withOpacity(0.8),
+                        color: AppColors.softIndigo.withValues(alpha: 0.8),
                       ),
                     ),
                     Text(
@@ -1180,7 +1181,7 @@ class _SummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              GestureDetector(
+              AppAnimatedPressable(
                 onTap: () {
                   HapticFeedback.lightImpact();
                   ref.read(weeklyInsightProvider.notifier).refresh();
@@ -1188,13 +1189,13 @@ class _SummaryCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.softIndigo.withOpacity(0.1),
+                    color: AppColors.softIndigo.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     PhosphorIconsRegular.arrowsClockwise,
                     size: 14,
-                    color: AppColors.softIndigo.withOpacity(0.7),
+                    color: AppColors.softIndigo.withValues(alpha: 0.7),
                   ),
                 ),
               ),
@@ -1204,7 +1205,7 @@ class _SummaryCard extends StatelessWidget {
           Container(
             width: double.infinity,
             height: 1,
-            color: AppColors.softIndigo.withOpacity(0.1),
+            color: AppColors.softIndigo.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
           Text(
@@ -1214,7 +1215,7 @@ class _SummaryCard extends StatelessWidget {
               height: 1.65,
               fontWeight: FontWeight.w500,
               color: isDark
-                  ? Colors.white.withOpacity(0.85)
+                  ? Colors.white.withValues(alpha: 0.85)
                   : AppColors.lightTextPrimary,
             ),
           ),
@@ -1237,7 +1238,7 @@ class _Shimmer extends StatelessWidget {
         color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFF0F0FF),
         borderRadius: BorderRadius.circular(24),
         border:
-            Border.all(color: AppColors.softIndigo.withOpacity(0.1)),
+            Border.all(color: AppColors.softIndigo.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1248,7 +1249,7 @@ class _Shimmer extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                      color: AppColors.softIndigo.withOpacity(0.1),
+                      color: AppColors.softIndigo.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12))),
               const SizedBox(width: 12),
               Column(
@@ -1258,14 +1259,14 @@ class _Shimmer extends StatelessWidget {
                       height: 8,
                       width: 100,
                       decoration: BoxDecoration(
-                          color: AppColors.softIndigo.withOpacity(0.15),
+                          color: AppColors.softIndigo.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4))),
                   const SizedBox(height: 6),
                   Container(
                       height: 8,
                       width: 70,
                       decoration: BoxDecoration(
-                          color: AppColors.softIndigo.withOpacity(0.1),
+                          color: AppColors.softIndigo.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4))),
                 ],
               )
@@ -1275,19 +1276,19 @@ class _Shimmer extends StatelessWidget {
           Container(
               height: 8,
               decoration: BoxDecoration(
-                  color: AppColors.softIndigo.withOpacity(0.1),
+                  color: AppColors.softIndigo.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4))),
           const SizedBox(height: 8),
           Container(
               height: 8,
               width: 240,
               decoration: BoxDecoration(
-                  color: AppColors.softIndigo.withOpacity(0.08),
+                  color: AppColors.softIndigo.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(4))),
           ],
         ),
       ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
-          duration: 1200.ms, color: AppColors.softIndigo.withOpacity(0.05));
+          duration: 1200.ms, color: AppColors.softIndigo.withValues(alpha: 0.05));
     }
   }
 
@@ -1376,11 +1377,11 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.dynamicMint.withOpacity(isDark ? 0.15 : 0.1),
+            color: AppColors.dynamicMint.withValues(alpha: isDark ? 0.15 : 0.1),
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.dynamicMint.withOpacity(0.06),
+              color: AppColors.dynamicMint.withValues(alpha: 0.06),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
@@ -1394,7 +1395,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.dynamicMint.withOpacity(0.15),
+                    color: AppColors.dynamicMint.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(PhosphorIconsFill.chartPie,
@@ -1407,7 +1408,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
-                    color: AppColors.dynamicMint.withOpacity(0.85),
+                    color: AppColors.dynamicMint.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -1421,7 +1422,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                   : 0.0;
               final isExpanded = _expandedIndex == i;
 
-              return GestureDetector(
+              return AppAnimatedPressable(
                 onTap: () {
                   HapticFeedback.selectionClick();
                   setState(() {
@@ -1444,7 +1445,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                           color: (isDark
                                   ? Colors.white
                                   : Colors.black)
-                              .withOpacity(0.06),
+                              .withValues(alpha: 0.06),
                         ),
                       // Label row
                       Row(
@@ -1457,7 +1458,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: isDark
-                                  ? Colors.white.withOpacity(0.8)
+                                  ? Colors.white.withValues(alpha: 0.8)
                                   : AppColors.lightTextPrimary,
                             ),
                           ),
@@ -1491,7 +1492,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 3),
                             decoration: BoxDecoration(
-                              color: m.color.withOpacity(0.15),
+                              color: m.color.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -1516,7 +1517,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                             Container(
                               height: 6,
                               decoration: BoxDecoration(
-                                color: m.color.withOpacity(0.12),
+                                color: m.color.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(3),
                               ),
                             ),
@@ -1529,7 +1530,7 @@ class _MacroAveragesCardState extends State<_MacroAveragesCard>
                                   borderRadius: BorderRadius.circular(3),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: m.color.withOpacity(0.4),
+                                      color: m.color.withValues(alpha: 0.4),
                                       blurRadius: 4,
                                     ),
                                   ],
@@ -1680,7 +1681,7 @@ class _MiniBarPainter extends CustomPainter {
           const Radius.circular(3),
         ),
         Paint()
-          ..color = isGoalMet ? color : color.withOpacity(0.3),
+          ..color = isGoalMet ? color : color.withValues(alpha: 0.3),
       );
     }
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/supplement_provider.dart';
 import '../../../database/models/supplement_doc.dart';
 
@@ -154,7 +155,7 @@ class SupplementScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -270,10 +271,10 @@ class _ProgressHero extends StatelessWidget {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: accent.withOpacity(0.25)),
+          border: Border.all(color: accent.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
-              color: accent.withOpacity(0.12),
+              color: accent.withValues(alpha: 0.12),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -287,7 +288,7 @@ class _ProgressHero extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: accent.withOpacity(0.15),
+                    color: accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(PhosphorIconsFill.pill, color: accent, size: 22),
@@ -302,7 +303,7 @@ class _ProgressHero extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.4,
-                        color: accent.withOpacity(0.7),
+                        color: accent.withValues(alpha: 0.7),
                       ),
                     ),
                     Text(
@@ -338,7 +339,7 @@ class _ProgressHero extends StatelessWidget {
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: accent.withOpacity(0.12),
+                      color: accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -350,12 +351,12 @@ class _ProgressHero extends StatelessWidget {
                         gradient: LinearGradient(
                           colors: pct == 1.0
                               ? [AppColors.dynamicMint, AppColors.dynamicMint]
-                              : [accent, accent.withOpacity(0.7)],
+                              : [accent, accent.withValues(alpha: 0.7)],
                         ),
                         borderRadius: BorderRadius.circular(4),
                         boxShadow: [
                           BoxShadow(
-                            color: accent.withOpacity(0.4),
+                            color: accent.withValues(alpha: 0.4),
                             blurRadius: 6,
                           ),
                         ],
@@ -452,7 +453,7 @@ class _SupplementGroupedListState
                 if (groupIdx > 0) const SizedBox(height: 8),
 
                 // ── Section Header ──────────────────────────────────
-                GestureDetector(
+                AppAnimatedPressable(
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() {
@@ -474,7 +475,7 @@ class _SupplementGroupedListState
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
                             color: isDark
-                                ? Colors.white.withOpacity(0.5)
+                                ? Colors.white.withValues(alpha: 0.5)
                                 : AppColors.lightTextSecondary,
                           ),
                         ),
@@ -484,8 +485,8 @@ class _SupplementGroupedListState
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: takenInGroup == sups.length
-                                ? AppColors.dynamicMint.withOpacity(0.15)
-                                : const Color(0xFF6366F1).withOpacity(0.1),
+                                ? AppColors.dynamicMint.withValues(alpha: 0.15)
+                                : const Color(0xFF6366F1).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -507,7 +508,7 @@ class _SupplementGroupedListState
                             PhosphorIconsRegular.caretDown,
                             size: 14,
                             color: isDark
-                                ? Colors.white.withOpacity(0.4)
+                                ? Colors.white.withValues(alpha: 0.4)
                                 : AppColors.lightTextSecondary,
                           ),
                         ),
@@ -521,8 +522,8 @@ class _SupplementGroupedListState
                 Container(
                   height: 1,
                   color: isDark
-                      ? Colors.white.withOpacity(0.07)
-                      : Colors.black.withOpacity(0.06),
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.black.withValues(alpha: 0.06),
                   margin: const EdgeInsets.only(bottom: 10),
                 ),
 
@@ -574,7 +575,7 @@ class _SupplementGroupedListState
         content: Text('${sup.name} unmarked'),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.grey.withOpacity(0.85),
+        backgroundColor: Colors.grey.withValues(alpha: 0.85),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -588,7 +589,7 @@ class _SupplementGroupedListState
         content: Text('${sup.name} marked as taken ✓'),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: accent.withOpacity(0.92),
+        backgroundColor: accent.withValues(alpha: 0.92),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -614,7 +615,7 @@ class _SupplementGroupedListState
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.35),
+                color: Colors.grey.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -629,7 +630,7 @@ class _SupplementGroupedListState
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.1),
+                  color: AppColors.danger.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(PhosphorIconsFill.archive,
@@ -689,10 +690,10 @@ class _SupplementCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.charcoalGlass : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withOpacity(isDark ? 0.18 : 0.15)),
+        border: Border.all(color: accent.withValues(alpha: isDark ? 0.18 : 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
             blurRadius: 14,
             offset: const Offset(0, 5),
           ),
@@ -714,7 +715,7 @@ class _SupplementCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: accent.withOpacity(0.13),
+                    color: accent.withValues(alpha: 0.13),
                     borderRadius: BorderRadius.circular(13),
                   ),
                   child: Icon(_iconFor(sup.iconName), color: accent, size: 21),
@@ -741,7 +742,7 @@ class _SupplementCard extends StatelessWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.45),
+                              .withValues(alpha: 0.45),
                         ),
                       ),
                       if (sup.timing.isNotEmpty) ...[
@@ -759,23 +760,23 @@ class _SupplementCard extends StatelessWidget {
                 ),
 
                 // Tap-to-check button
-                GestureDetector(
+                AppAnimatedPressable(
                   onTap: onToggle,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isTaken ? accent : accent.withOpacity(0.1),
+                      color: isTaken ? accent : accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: isTaken
                           ? null
                           : Border.all(
-                              color: accent.withOpacity(0.3), width: 1.5),
+                              color: accent.withValues(alpha: 0.3), width: 1.5),
                       boxShadow: isTaken
                           ? [
                               BoxShadow(
-                                color: accent.withOpacity(0.4),
+                                color: accent.withValues(alpha: 0.4),
                                 blurRadius: 8,
                                 offset: const Offset(0, 3),
                               )
@@ -794,7 +795,7 @@ class _SupplementCard extends StatelessWidget {
                         : Icon(
                             PhosphorIconsRegular.check,
                             size: 18,
-                            color: accent.withOpacity(0.5),
+                            color: accent.withValues(alpha: 0.5),
                           ),
                   ),
                 ),
@@ -824,9 +825,9 @@ class _TimingChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,
@@ -881,7 +882,7 @@ class _PresetPacksSheetState extends State<_PresetPacksSheet> {
             Text('${pack.title} added (${pack.supplements.length} supplements) ✓'),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.dynamicMint.withOpacity(0.92),
+        backgroundColor: AppColors.dynamicMint.withValues(alpha: 0.92),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -912,7 +913,7 @@ class _PresetPacksSheetState extends State<_PresetPacksSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.35),
+                color: Colors.grey.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -947,13 +948,13 @@ class _PresetPacksSheetState extends State<_PresetPacksSheet> {
                     margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       color: widget.isDark
-                          ? Colors.white.withOpacity(0.05)
+                          ? Colors.white.withValues(alpha: 0.05)
                           : AppColors.cloudGray,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isAdded
-                            ? AppColors.dynamicMint.withOpacity(0.4)
-                            : const Color(0xFF6366F1).withOpacity(0.12),
+                            ? AppColors.dynamicMint.withValues(alpha: 0.4)
+                            : const Color(0xFF6366F1).withValues(alpha: 0.12),
                       ),
                     ),
                     child: Padding(
@@ -984,7 +985,7 @@ class _PresetPacksSheetState extends State<_PresetPacksSheet> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: widget.isDark
-                                        ? Colors.white.withOpacity(0.45)
+                                        ? Colors.white.withValues(alpha: 0.45)
                                         : AppColors.lightTextSecondary,
                                   ),
                                 ),
@@ -1002,15 +1003,15 @@ class _PresetPacksSheetState extends State<_PresetPacksSheet> {
                                       foregroundColor: Colors.white,
                                       disabledBackgroundColor: isAdded
                                           ? AppColors.dynamicMint
-                                              .withOpacity(0.7)
-                                          : Colors.grey.withOpacity(0.3),
+                                              .withValues(alpha: 0.7)
+                                          : Colors.grey.withValues(alpha: 0.3),
                                       disabledForegroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
                                               BorderRadius.circular(12)),
                                       elevation: isAdded ? 0 : 4,
                                       shadowColor: const Color(0xFF6366F1)
-                                          .withOpacity(0.3),
+                                          .withValues(alpha: 0.3),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16),
                                     ),
@@ -1087,7 +1088,7 @@ class _EmptyState extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFF6366F1).withOpacity(0.12),
+              color: const Color(0xFF6366F1).withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(PhosphorIconsFill.pill,
@@ -1111,7 +1112,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               color: isDark
-                  ? Colors.white.withOpacity(0.45)
+                  ? Colors.white.withValues(alpha: 0.45)
                   : AppColors.lightTextSecondary,
               height: 1.5,
             ),
@@ -1149,7 +1150,7 @@ class _EmptyState extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 6,
-                    shadowColor: const Color(0xFF6366F1).withOpacity(0.4),
+                    shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.4),
                   ),
                 ),
               ),
@@ -1246,7 +1247,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.35),
+                color: Colors.grey.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1301,7 +1302,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: widget.isDark
-                                  ? Colors.white.withOpacity(0.05)
+                                  ? Colors.white.withValues(alpha: 0.05)
                                   : AppColors.cloudGray,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -1335,7 +1336,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                     runSpacing: 8,
                     children: _kTimingOptions.map((t) {
                       final selected = _timing.contains(t.$1);
-                      return GestureDetector(
+                      return AppAnimatedPressable(
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() {
@@ -1353,11 +1354,11 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                           decoration: BoxDecoration(
                             color: selected
                                 ? accent
-                                : accent.withOpacity(0.1),
+                                : accent.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                             border: selected
                                 ? null
-                                : Border.all(color: accent.withOpacity(0.25)),
+                                : Border.all(color: accent.withValues(alpha: 0.25)),
                           ),
                           child: Text(
                             t.$2,
@@ -1383,7 +1384,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                       itemBuilder: (_, i) {
                         final (key, _) = _icons[i];
                         final sel = _iconName == key;
-                        return GestureDetector(
+                        return AppAnimatedPressable(
                           onTap: () {
                             HapticFeedback.selectionClick();
                             setState(() => _iconName = key);
@@ -1396,7 +1397,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                             decoration: BoxDecoration(
                               color: sel
                                   ? accent
-                                  : accent.withOpacity(0.1),
+                                  : accent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -1418,7 +1419,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                     runSpacing: 10,
                     children: _kSupplementColors.map((c) {
                       final sel = _colorValue == c.value;
-                      return GestureDetector(
+                      return AppAnimatedPressable(
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() => _colorValue = c.value);
@@ -1437,7 +1438,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                             boxShadow: sel
                                 ? [
                                     BoxShadow(
-                                      color: c.withOpacity(0.45),
+                                      color: c.withValues(alpha: 0.45),
                                       blurRadius: 8,
                                       offset: const Offset(0, 3),
                                     )
@@ -1475,7 +1476,7 @@ class _AddSupplementSheetState extends ConsumerState<_AddSupplementSheet> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18)),
                         elevation: 6,
-                        shadowColor: accent.withOpacity(0.4),
+                        shadowColor: accent.withValues(alpha: 0.4),
                       ),
                       child: _saving
                           ? const SizedBox(
@@ -1518,7 +1519,7 @@ class _SheetLabel extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color:
-              Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
           letterSpacing: 0.3,
         ),
       ),
@@ -1528,10 +1529,10 @@ class _SheetLabel extends StatelessWidget {
 
 InputDecoration _inputDeco(String hint, bool isDark) => InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey.withOpacity(0.4)),
+      hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.4)),
       filled: true,
       fillColor:
-          isDark ? Colors.white.withOpacity(0.05) : AppColors.cloudGray,
+          isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.cloudGray,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,

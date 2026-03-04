@@ -26,12 +26,26 @@ subprojects {
 
     // Force all subprojects (e.g. isar_flutter_libs) to compile against SDK 36
     // so android:attr/lStar (added in API 31/Material3) is always found.
-    afterEvaluate {
-        val androidExtension = extensions.findByName("android")
-        if (androidExtension is com.android.build.gradle.LibraryExtension) {
-            androidExtension.compileSdk = 36
-        }
-    }
+      afterEvaluate {
+          val androidExtension = extensions.findByName("android")
+            if (androidExtension is com.android.build.gradle.LibraryExtension) {
+                androidExtension.compileSdk = 36
+                androidExtension.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+                androidExtension.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+            }
+            // Suppress obsolete source/target 8 warnings from Java compilation tasks
+            tasks.withType<JavaCompile>().configureEach {
+                sourceCompatibility = JavaVersion.VERSION_17.toString()
+                targetCompatibility = JavaVersion.VERSION_17.toString()
+                options.compilerArgs.addAll(listOf("-Xlint:-options"))
+            }
+              // Align Kotlin jvmTarget with Java target to avoid JVM compatibility mismatch
+              tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+                  compilerOptions {
+                      jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                  }
+              }
+      }
 }
 subprojects {
     project.evaluationDependsOn(":app")

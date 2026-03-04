@@ -11,7 +11,7 @@ class HabitsNotifier extends Notifier<List<HabitDoc>> {
 
   @override
   List<HabitDoc> build() {
-    _load();
+    Future.microtask(_load);
     return [];
   }
 

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'package:isar/isar.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../../database/models/meal_doc.dart';
 import '../../../../services/local_db_service.dart';
@@ -131,7 +130,7 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           duration: const Duration(seconds: 2),
-          backgroundColor: AppColors.dynamicMint.withOpacity(0.9),
+          backgroundColor: AppColors.dynamicMint.withValues(alpha: 0.9),
         ),
       );
     }
@@ -141,7 +140,7 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF14172A) : Colors.white;
-    final borderColor = AppColors.dynamicMint.withOpacity(0.35);
+    final borderColor = AppColors.dynamicMint.withValues(alpha: 0.35);
 
     if (_parseError || _scan == null) {
       return _ErrorTile(isDark: isDark);
@@ -162,7 +161,7 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
         border: Border.all(color: borderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.dynamicMint.withOpacity(0.12),
+            color: AppColors.dynamicMint.withValues(alpha: 0.12),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -180,8 +179,8 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.dynamicMint.withOpacity(isDark ? 0.18 : 0.1),
-                    AppColors.softIndigo.withOpacity(isDark ? 0.14 : 0.06),
+                    AppColors.dynamicMint.withValues(alpha: isDark ? 0.18 : 0.1),
+                    AppColors.softIndigo.withValues(alpha: isDark ? 0.14 : 0.06),
                   ],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
@@ -192,7 +191,7 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                   Container(
                     padding: const EdgeInsets.all(9),
                     decoration: BoxDecoration(
-                      color: AppColors.dynamicMint.withOpacity(0.2),
+                      color: AppColors.dynamicMint.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(PhosphorIconsFill.forkKnife,
@@ -233,10 +232,10 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: confidenceColor.withOpacity(0.15),
+                      color: confidenceColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: confidenceColor.withOpacity(0.4)),
+                          color: confidenceColor.withValues(alpha: 0.4)),
                     ),
                     child: Text(
                       scan.confidence,
@@ -327,8 +326,8 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: isDark
-                                        ? Colors.white.withOpacity(0.75)
-                                        : Colors.black.withOpacity(0.7),
+                                        ? Colors.white.withValues(alpha: 0.75)
+                                        : Colors.black.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ),
@@ -338,8 +337,8 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: isDark
-                                      ? Colors.white.withOpacity(0.5)
-                                      : Colors.black.withOpacity(0.45),
+                                      ? Colors.white.withValues(alpha: 0.5)
+                                      : Colors.black.withValues(alpha: 0.45),
                                 ),
                               ),
                             ],
@@ -387,15 +386,15 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                                 color: isSelected
                                     ? null
                                     : (isDark
-                                        ? Colors.white.withOpacity(0.06)
-                                        : Colors.black.withOpacity(0.05)),
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : Colors.black.withValues(alpha: 0.05)),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.transparent
                                       : (isDark
-                                          ? Colors.white.withOpacity(0.1)
-                                          : Colors.black.withOpacity(0.1)),
+                                          ? Colors.white.withValues(alpha: 0.1)
+                                          : Colors.black.withValues(alpha: 0.1)),
                                 ),
                               ),
                               child: Text(
@@ -437,7 +436,7 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                             boxShadow: [
                               BoxShadow(
                                 color:
-                                    AppColors.dynamicMint.withOpacity(0.35),
+                                    AppColors.dynamicMint.withValues(alpha: 0.35),
                                 blurRadius: 14,
                                 offset: const Offset(0, 4),
                               ),
@@ -479,10 +478,10 @@ class _FoodScanCardState extends ConsumerState<FoodScanCard> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       decoration: BoxDecoration(
-                        color: AppColors.dynamicMint.withOpacity(0.15),
+                        color: AppColors.dynamicMint.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: AppColors.dynamicMint.withOpacity(0.4)),
+                            color: AppColors.dynamicMint.withValues(alpha: 0.4)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -592,9 +591,9 @@ class _MacroChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.12 : 0.08),
+          color: color.withValues(alpha: isDark ? 0.12 : 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.25)),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           children: [
@@ -611,7 +610,7 @@ class _MacroChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 2),
@@ -645,10 +644,10 @@ class _ErrorTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:
-            Colors.redAccent.withOpacity(isDark ? 0.12 : 0.08),
+            Colors.redAccent.withValues(alpha: isDark ? 0.12 : 0.08),
         borderRadius: BorderRadius.circular(18),
         border:
-            Border.all(color: Colors.redAccent.withOpacity(0.3)),
+            Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -661,8 +660,8 @@ class _ErrorTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 color: isDark
-                    ? Colors.white.withOpacity(0.75)
-                    : Colors.black.withOpacity(0.7),
+                    ? Colors.white.withValues(alpha: 0.75)
+                    : Colors.black.withValues(alpha: 0.7),
               ),
             ),
           ),

@@ -10,6 +10,7 @@ import '../../../workout/presentation/widgets/workout_plan_card.dart';
 import '../../../nutrition/presentation/widgets/meal_plan_card.dart';
 import 'weekly_report_card.dart';
 import 'food_scan_card.dart';
+import '../gemma_setup_screen.dart';
 
 // Callback type for when user selects an option or submits a form
 typedef OnReplyCallback = void Function(String message);
@@ -240,12 +241,12 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // AI bubble colours
     final aiBubbleBg = isDark
-        ? Colors.white.withOpacity(0.07)
+        ? Colors.white.withValues(alpha: 0.07)
         : const Color(0xFFF0F2F8); // light grey-blue tint
     final aiBubbleBorder = isDark
-        ? Colors.white.withOpacity(0.1)
-        : Colors.black.withOpacity(0.08);
-    final aiTextColor = isDark ? Colors.white.withOpacity(0.88) : const Color(0xFF1A1D35);
+        ? Colors.white.withValues(alpha: 0.1)
+        : Colors.black.withValues(alpha: 0.08);
+    final aiTextColor = isDark ? Colors.white.withValues(alpha: 0.88) : const Color(0xFF1A1D35);
     final aiSubColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
 
     return GestureDetector(
@@ -275,10 +276,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           boxShadow: [
             BoxShadow(
               color: isUser
-                  ? AppColors.softIndigo.withOpacity(0.3)
+                  ? AppColors.softIndigo.withValues(alpha: 0.3)
                   : (isDark
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.06)),
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.black.withValues(alpha: 0.06)),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -305,8 +306,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
               fontSize: 13,
               fontFamily: 'monospace',
               backgroundColor: isDark
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.06),
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.06),
               color: isDark ? AppColors.dynamicMint : AppColors.softIndigo,
             ),
             blockquote: TextStyle(color: aiSubColor, fontSize: 14),
@@ -336,8 +337,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
 
   Widget _buildStreamingBubble() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white.withOpacity(0.88) : const Color(0xFF1A1D35);
-    final bgColor = isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFF0F2F8);
+    final textColor = isDark ? Colors.white.withValues(alpha: 0.88) : const Color(0xFF1A1D35);
+    final bgColor = isDark ? Colors.white.withValues(alpha: 0.07) : const Color(0xFFF0F2F8);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -349,14 +350,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           bottomRight: Radius.circular(22),
         ),
         border: Border.all(
-          color: AppColors.softIndigo.withOpacity(0.25),
+          color: AppColors.softIndigo.withValues(alpha: 0.25),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? AppColors.softIndigo.withOpacity(0.1)
-                : Colors.black.withOpacity(0.06),
+                ? AppColors.softIndigo.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.06),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -406,7 +407,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(22),
           topRight: Radius.circular(22),
@@ -414,7 +415,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
           bottomRight: Radius.circular(22),
         ),
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: Colors.white.withValues(alpha: 0.08),
           width: 1,
         ),
       ),
@@ -485,7 +486,92 @@ class _ChatBubbleState extends ConsumerState<ChatBubble> {
     if (widget.message.widgetType == 'food_scan') {
       return FoodScanCard(scanJson: widget.message.text);
     }
+    if (widget.message.widgetType == 'offline_setup') {
+      return _buildOfflineSetupWidget(context);
+    }
     return WorkoutPlanCard(planJson: widget.message.text);
+  }
+
+  Widget _buildOfflineSetupWidget(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E243A) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.dynamicMint.withValues(alpha: 0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(PhosphorIconsFill.cloudArrowDown,
+                  color: AppColors.dynamicMint, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'AI Model Required',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.dynamicMint,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            widget.message.text,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white70 : Colors.black87,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.dynamicMint,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => DraggableScrollableSheet(
+                    initialChildSize: 0.9,
+                    maxChildSize: 0.95,
+                    minChildSize: 0.5,
+                    builder: (_, __) => const GemmaSetupScreen(),
+                  ),
+                );
+              },
+              child: const Text(
+                'Open Offline AI Setup',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatTimestamp(DateTime dt) {
@@ -534,7 +620,7 @@ class _OptionButtonState extends State<_OptionButton> {
     final palette = _palettes[widget.index % _palettes.length];
     final color = palette.base;
     final lightColor = palette.light;
-    final cardBg = isDark ? Colors.white.withOpacity(0.06) : Colors.white;
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.white;
     final labelColor = isDark ? Colors.white : const Color(0xFF1A1D35);
 
     return GestureDetector(
@@ -550,18 +636,18 @@ class _OptionButtonState extends State<_OptionButton> {
             1.0, _pressed ? 0.97 : 1.0, 1.0),
           decoration: BoxDecoration(
             color: _pressed
-                ? color.withOpacity(0.18)
+                ? color.withValues(alpha: 0.18)
                 : cardBg,
             borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: color.withOpacity(_pressed ? 0.7 : 0.35),
+            color: color.withValues(alpha: _pressed ? 0.7 : 0.35),
             width: 1.5,
           ),
           boxShadow: _pressed
               ? []
               : [
                   BoxShadow(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -589,9 +675,9 @@ class _OptionButtonState extends State<_OptionButton> {
                 width: 26,
                 height: 26,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.18),
+                  color: color.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
-                  border: Border.all(color: color.withOpacity(0.5), width: 1.5),
+                  border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
                 ),
                 child: Center(
                   child: Text(
@@ -626,7 +712,7 @@ class _OptionButtonState extends State<_OptionButton> {
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 13,
-                  color: color.withOpacity(0.6),
+                  color: color.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -680,15 +766,15 @@ class _InlineFormCardState extends State<_InlineFormCard> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.softIndigo.withOpacity(0.3),
+          color: AppColors.softIndigo.withValues(alpha: 0.3),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.softIndigo.withOpacity(0.1),
+            color: AppColors.softIndigo.withValues(alpha: 0.1),
             blurRadius: 14,
           ),
         ],
@@ -713,7 +799,7 @@ class _InlineFormCardState extends State<_InlineFormCard> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.softIndigo.withOpacity(0.35),
+                      color: AppColors.softIndigo.withValues(alpha: 0.35),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -751,7 +837,7 @@ class _InlineFormCardState extends State<_InlineFormCard> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.65),
+              color: Colors.white.withValues(alpha: 0.65),
               letterSpacing: 0.3,
             ),
           ),
@@ -768,16 +854,16 @@ class _InlineFormCardState extends State<_InlineFormCard> {
   Widget _buildTextField(String label) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
+        color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
       child: TextField(
         controller: _controllers[label],
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Type here…',
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
           border: InputBorder.none,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -798,9 +884,9 @@ class _InlineFormCardState extends State<_InlineFormCard> {
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: AppColors.softIndigo,
-            inactiveTrackColor: Colors.white.withOpacity(0.12),
+            inactiveTrackColor: Colors.white.withValues(alpha: 0.12),
             thumbColor: AppColors.dynamicMint,
-            overlayColor: AppColors.softIndigo.withOpacity(0.2),
+            overlayColor: AppColors.softIndigo.withValues(alpha: 0.2),
             trackHeight: 3,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
           ),
@@ -819,7 +905,7 @@ class _InlineFormCardState extends State<_InlineFormCard> {
           children: [
             Text('${min.toInt()}',
                 style: TextStyle(
-                    fontSize: 11, color: Colors.white.withOpacity(0.4))),
+                    fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -838,7 +924,7 @@ class _InlineFormCardState extends State<_InlineFormCard> {
             ),
             Text('${max.toInt()}',
                 style: TextStyle(
-                    fontSize: 11, color: Colors.white.withOpacity(0.4))),
+                    fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
           ],
         ),
       ],
@@ -874,13 +960,13 @@ class _AiAvatar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.softIndigo.withOpacity(0.35),
+            color: AppColors.softIndigo.withValues(alpha: 0.35),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           width: 1.5,
         ),
       ),
@@ -907,13 +993,13 @@ class _ActionChip extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.07),
+          color: Colors.white.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: Colors.white.withOpacity(0.1), width: 1),
+              color: Colors.white.withValues(alpha: 0.1), width: 1),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.15), blurRadius: 8),
+                color: Colors.black.withValues(alpha: 0.15), blurRadius: 8),
           ],
         ),
         child: Row(

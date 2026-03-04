@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/chat_controller.dart';
 import '../application/chat_suggestions_provider.dart';
 import 'widgets/chat_bubble.dart';
@@ -326,24 +327,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               left: 0,
               right: 0,
               child: Center(
-                child: GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    _scrollToBottom();
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppColors.softIndigo, AppColors.dynamicMint],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
+              child: AppAnimatedPressable(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  _scrollToBottom();
+                },
+                haptic: HapticFeedbackType.none,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
                         BoxShadow(
-                          color: AppColors.softIndigo.withOpacity(0.45),
+                          color: AppColors.softIndigo.withValues(alpha: 0.45),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -371,7 +373,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   double _inputBarHeight(BuildContext context) {
-    return 70 + MediaQuery.of(context).padding.bottom;
+    return 78 + MediaQuery.of(context).padding.bottom;
   }
 
   Widget _buildListeningBanner() {
@@ -379,9 +381,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -415,9 +417,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        color: Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -463,62 +465,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             titleSpacing: 0,
             centerTitle: false,
             title: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 // Custom AI logo
                 _AiLogoWidget(isOffline: isOffline, size: 38),
                 const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'HealthAI Coach',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: isDark ? Colors.white : AppColors.lightTextPrimary),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isOffline
-                                ? const Color(0xFF4A90D9)
-                                : AppColors.dynamicMint,
-                          ),
-                        )
-                            .animate(onPlay: (c) => c.repeat(reverse: true))
-                            .fade(duration: 1200.ms),
-                        const SizedBox(width: 5),
-                        Text(
-                          isOffline
-                              ? 'On-Device · Offline'
-                              : 'AI · Ready',
-                          style: TextStyle(
-                              color: isDark ? Colors.grey.shade500 : Colors.grey.shade600, fontSize: 11),
-                        ),
-                        if (isOffline &&
-                            modelState.status ==
-                                GemmaModelStatus.loading) ...[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'HealthAI Coach',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                            color: isDark ? Colors.white : AppColors.lightTextPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isOffline
+                                  ? const Color(0xFF4A90D9)
+                                  : AppColors.dynamicMint,
+                            ),
+                          )
+                              .animate(onPlay: (c) => c.repeat(reverse: true))
+                              .fade(duration: 1200.ms),
                           const SizedBox(width: 5),
-                          const SizedBox(
-                            width: 8,
-                            height: 8,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5,
-                              color: AppColors.dynamicMint,
+                          Flexible(
+                            child: Text(
+                              isOffline
+                                  ? 'On-Device · Offline'
+                                  : 'AI · Ready',
+                              style: TextStyle(
+                                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade600, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (isOffline &&
+                              modelState.status ==
+                                  GemmaModelStatus.loading) ...[
+                            const SizedBox(width: 5),
+                            const SizedBox(
+                              width: 8,
+                              height: 8,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppColors.dynamicMint,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -578,8 +586,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               const SizedBox(width: 4),
             ],
             backgroundColor: isDark
-                ? AppColors.deepObsidian.withOpacity(0.72)
-                : Colors.white.withOpacity(0.85),
+                ? AppColors.deepObsidian.withValues(alpha: 0.72)
+                : Colors.white.withValues(alpha: 0.85),
             elevation: 0,
             scrolledUnderElevation: 0,
             bottom: PreferredSize(
@@ -589,8 +597,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      AppColors.softIndigo.withOpacity(0.3),
-                      AppColors.dynamicMint.withOpacity(0.2),
+                      AppColors.softIndigo.withValues(alpha: 0.3),
+                      AppColors.dynamicMint.withValues(alpha: 0.2),
                       Colors.transparent,
                     ],
                   ),
@@ -609,7 +617,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       controller: _scrollController,
-      physics: const BouncingScrollPhysics(),
+      physics: scrollPhysics,
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 80,
         left: 22,
@@ -765,7 +773,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             color: isDark ? const Color(0xFF12151F) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border.all(
-              color: Colors.white.withOpacity(isDark ? 0.07 : 0),
+              color: Colors.white.withValues(alpha: isDark ? 0.07 : 0),
             ),
           ),
           child: SafeArea(
@@ -777,7 +785,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 Center(child: Container(
                   width: 40, height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 )),
@@ -786,7 +794,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.softIndigo.withOpacity(0.15),
+                      color: AppColors.softIndigo.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(PhosphorIconsFill.paperclip,
@@ -803,7 +811,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 Text('Scan food or start a conversation',
                     style: TextStyle(
                       fontSize: 12,
-                      color: (isDark ? Colors.white : Colors.black).withOpacity(0.4),
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.4),
                     )),
                 const SizedBox(height: 14),
 
@@ -853,43 +861,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
                 // ── Divider ────────────────────────────────────────────────
                 Row(children: [
-                  Expanded(child: Divider(color: (isDark ? Colors.white : Colors.black).withOpacity(0.1))),
+                  Expanded(child: Divider(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1))),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text('PROMPTS',
                         style: TextStyle(
                           fontSize: 10, fontWeight: FontWeight.w700,
                           letterSpacing: 1.1,
-                          color: (isDark ? Colors.white : Colors.black).withOpacity(0.3),
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.3),
                         )),
                   ),
-                  Expanded(child: Divider(color: (isDark ? Colors.white : Colors.black).withOpacity(0.1))),
+                  Expanded(child: Divider(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1))),
                 ]),
                 const SizedBox(height: 10),
 
                 ...prompts.asMap().entries.map((e) {
-                  final p = e.value;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      Navigator.pop(ctx);
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (mounted) _sendMessage(p.text);
-                      });
-                    },
-                    child: Container(
+                    final p = e.value;
+                    return AppAnimatedPressable(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(ctx);
+                        Future.delayed(const Duration(milliseconds: 150), () {
+                          if (mounted) _sendMessage(p.text);
+                        });
+                      },
+                      haptic: HapticFeedbackType.none,
+                      child: Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: p.color.withOpacity(isDark ? 0.10 : 0.06),
+                        color: p.color.withValues(alpha: isDark ? 0.10 : 0.06),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: p.color.withOpacity(0.2)),
+                        border: Border.all(color: p.color.withValues(alpha: 0.2)),
                       ),
                       child: Row(children: [
                         Container(
                           width: 34, height: 34,
                           decoration: BoxDecoration(
-                            color: p.color.withOpacity(0.15),
+                            color: p.color.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(p.icon, color: p.color, size: 17),
@@ -898,12 +907,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                         Expanded(child: Text(p.label,
                             style: TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white.withOpacity(0.88)
+                              color: isDark ? Colors.white.withValues(alpha: 0.88)
                                   : const Color(0xFF1C1E23),
                             ))),
                         Icon(PhosphorIconsRegular.caretRight,
                             size: 14,
-                            color: p.color.withOpacity(0.5)),
+                            color: p.color.withValues(alpha: 0.5)),
                       ]),
                     ),
                   ).animate(delay: Duration(milliseconds: 40 * e.key))
@@ -925,209 +934,157 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         ref.watch(gemmaModelStateProvider).status == GemmaModelStatus.loading;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      // No background, no border — completely transparent so content shows through
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [
+                  Colors.transparent,
+                  AppColors.deepObsidian.withValues(alpha: 0.4),
+                  AppColors.deepObsidian.withValues(alpha: 0.7),
+                ]
+              : [
+                  Colors.transparent,
+                  AppColors.cloudGray.withValues(alpha: 0.4),
+                  AppColors.cloudGray.withValues(alpha: 0.7),
+                ],
+        ),
+      ),
       padding: EdgeInsets.fromLTRB(
-          10, 6, 10, bottomPadding > 0 ? bottomPadding : 10),
+          8, 10, 8, bottomPadding > 0 ? bottomPadding + 4 : 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-            // Attach button — rounded floating circle
-            GestureDetector(
-              onTap: () => _showAttachSheet(context),
-              child: Container(
-              width: 44,
-              height: 44,
+          // ── Emoji Button (Separate & Circular) ─────────────────────────────
+          AppAnimatedPressable(
+            onTap: () {}, // To be implemented
+            pressScale: 0.88,
+            child: Container(
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark
-                    ? Colors.white.withOpacity(0.08)
-                    : Colors.black.withOpacity(0.06),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.12)
-                      : Colors.black.withOpacity(0.1),
-                ),
+                color: isDark 
+                    ? const Color(0xFF1F2C34).withValues(alpha: 0.95) 
+                    : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Icon(
-                PhosphorIconsRegular.paperclip,
-                color: isDark
-                    ? Colors.white.withOpacity(0.5)
-                    : Colors.black.withOpacity(0.45),
-                size: 20,
+              child: Center(
+                child: Icon(
+                  PhosphorIconsRegular.smiley,
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  size: 26,
+                ),
               ),
             ),
           ),
+
           const SizedBox(width: 8),
 
-              // Text field pill
-              Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  constraints:
-                      const BoxConstraints(minHeight: 48, maxHeight: 120),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(_hasText ? 0.08 : 0.05)
-                        : Colors.black.withOpacity(_hasText ? 0.05 : 0.04),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: _hasText
-                          ? AppColors.softIndigo.withOpacity(0.55)
-                          : (isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.1)),
-                      width: 1.5,
+          // ── Refined Input Pill ──────────────────────────────────────────────
+          Expanded(
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? const Color(0xFF1F2C34).withValues(alpha: 0.95) 
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 20),
+                  // Main Text Input
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.send,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Message',
+                        hintStyle: TextStyle(
+                          color: isDark 
+                              ? Colors.white.withValues(alpha: 0.3) 
+                              : Colors.black.withValues(alpha: 0.3),
+                          fontSize: 16,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      enabled: !isBlocked && !modelLoading,
+                      onSubmitted: (_) => _sendMessage(),
                     ),
-                    boxShadow: _hasText
-                        ? [
-                            BoxShadow(
-                              color: AppColors.softIndigo.withOpacity(0.18),
-                              blurRadius: 18,
-                              spreadRadius: 0,
-                            ),
-                          ]
-                        : [],
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                            child: TextField(
-                              controller: _controller,
-                              minLines: 1,
-                              maxLines: 5,
-                              textInputAction: TextInputAction.send,
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  height: 1.45,
-                                  color: isDark ? Colors.white : AppColors.lightTextPrimary),
-                              decoration: InputDecoration(
-                                hintText: isBlocked
-                                    ? 'Rate limited, please wait...'
-                                    : modelLoading
-                                        ? 'Loading offline model…'
-                                        : isOffline
-                                            ? 'Ask your offline coach…'
-                                            : 'Ask your coach anything...',
-                                hintStyle: TextStyle(
-                                  color: isDark
-                                      ? Colors.white.withOpacity(0.28)
-                                      : Colors.black.withOpacity(0.28),
-                                  fontSize: 15,
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 13, horizontal: 0),
-                              ),
-                              enabled: !isBlocked && !modelLoading,
-                              onSubmitted: (_) => _sendMessage(),
-                            ),
-                        ),
-                      ),
+                  
+                  // Attachment Icon (Inside Pill)
+                  IconButton(
+                    icon: Icon(
+                      PhosphorIconsRegular.paperclip,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                      size: 24,
+                    ),
+                    onPressed: () => _showAttachSheet(context),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
+            ),
+          ),
 
-                      // Mic button (inside pill, right side)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6, right: 6),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          transitionBuilder: (child, animation) =>
-                              ScaleTransition(scale: animation, child: child),
-                          child: _hasText
-                              ? const SizedBox(key: ValueKey('empty'), width: 0)
-                              : GestureDetector(
-                                  key: const ValueKey('mic'),
-                                  onTap: _toggleListening,
-                                    child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _isListening
-                                            ? const Color(0xFF25D366)
-                                            : (isDark
-                                                ? Colors.white.withOpacity(0.1)
-                                                : Colors.black.withOpacity(0.08)),
-                                        boxShadow: _isListening
-                                            ? [
-                                                BoxShadow(
-                                                  color: const Color(0xFF25D366)
-                                                      .withOpacity(0.4),
-                                                  blurRadius: 12,
-                                                ),
-                                              ]
-                                            : [],
-                                      ),
-                                      child: Icon(
-                                        _isListening
-                                            ? PhosphorIconsFill.microphone
-                                            : PhosphorIconsRegular.microphone,
-                                        size: 18,
-                                        color: _isListening
-                                            ? Colors.white
-                                            : (isDark
-                                                ? Colors.white.withOpacity(0.5)
-                                                : Colors.black.withOpacity(0.45)),
-                                      ),
-                                    ),
-                                ),
-                        ),
-                      ),
-                    ],
+          const SizedBox(width: 8),
+
+          // ── Main Action Button (Mic / Send) ─────────────────────────────────
+          AppAnimatedPressable(
+            key: ValueKey(_hasText ? 'send' : 'mic'),
+            onTap: _hasText ? _sendMessage : _toggleListening,
+            pressScale: 0.88,
+            haptic: HapticFeedbackType.medium,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.dynamicMint,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.dynamicMint.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  _hasText
+                      ? PhosphorIconsFill.paperPlaneRight
+                      : PhosphorIconsFill.microphone,
+                  color: Colors.black.withValues(alpha: 0.8),
+                  size: 24,
                 ),
               ),
-
-              const SizedBox(width: 8),
-
-              // Send button — shows when typing; else nothing (mic is inside pill)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: CurvedAnimation(
-                        parent: animation, curve: Curves.easeOutBack),
-                    child: child),
-                child: _hasText
-                    ? GestureDetector(
-                        key: const ValueKey('send'),
-                        onTap: _sendMessage,
-                        child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [
-                                AppColors.softIndigo,
-                                AppColors.dynamicMint
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.softIndigo.withOpacity(0.45),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            PhosphorIconsFill.paperPlaneRight,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      )
-                    : const SizedBox(key: ValueKey('none'), width: 0),
-              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1160,17 +1117,17 @@ class _AiLogoWidget extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            primaryColor.withOpacity(0.25),
-            primaryColor.withOpacity(0.05),
+            primaryColor.withValues(alpha: 0.25),
+            primaryColor.withValues(alpha: 0.05),
           ],
         ),
         border: Border.all(
-          color: primaryColor.withOpacity(0.35),
+          color: primaryColor.withValues(alpha: 0.35),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.3),
+            color: primaryColor.withValues(alpha: 0.3),
             blurRadius: size * 0.4,
             spreadRadius: 0,
           ),
@@ -1264,7 +1221,7 @@ class _NeuralIconPainter extends CustomPainter {
       [0, 1], [0, 2], [1, 3], [2, 4], [3, 4],
     ];
 
-    paint.color = Colors.white.withOpacity(0.45);
+    paint.color = Colors.white.withValues(alpha: 0.45);
     for (final conn in connections) {
       canvas.drawLine(nodes[conn[0]], nodes[conn[1]], paint);
     }
@@ -1305,21 +1262,22 @@ class _AppBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
+      pressScale: 0.93,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
           color: isActive
-              ? color.withOpacity(0.18)
-              : (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06)),
+              ? color.withValues(alpha: 0.18)
+              : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06)),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive
-                ? color.withOpacity(0.45)
-                : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1)),
+                ? color.withValues(alpha: 0.45)
+                : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1)),
           ),
         ),
         child: Row(
@@ -1341,7 +1299,7 @@ class _AppBarButton extends StatelessWidget {
 
 // ─── Suggestion tile ──────────────────────────────────────────────────────────
 
-class _SuggestionTile extends StatefulWidget {
+class _SuggestionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -1357,44 +1315,29 @@ class _SuggestionTile extends StatefulWidget {
   });
 
   @override
-  State<_SuggestionTile> createState() => _SuggestionTileState();
-}
-
-class _SuggestionTileState extends State<_SuggestionTile> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        HapticFeedback.lightImpact();
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 130),
+    return AppAnimatedPressable(
+      onTap: onTap,
+      pressScale: 0.97,
+      child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 9),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        transform: Matrix4.diagonal3Values(_pressed ? 0.97 : 1.0, _pressed ? 0.97 : 1.0, 1.0),
         decoration: BoxDecoration(
-          color: widget.isHighlighted
-              ? AppColors.softIndigo.withOpacity(0.14)
-              : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+          color: isHighlighted
+              ? AppColors.softIndigo.withValues(alpha: 0.14)
+              : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: widget.isHighlighted
-                ? AppColors.softIndigo.withOpacity(0.4)
-                : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.08)),
-            width: widget.isHighlighted ? 1.5 : 1.0,
+            color: isHighlighted
+                ? AppColors.softIndigo.withValues(alpha: 0.4)
+                : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08)),
+            width: isHighlighted ? 1.5 : 1.0,
           ),
-          boxShadow: widget.isHighlighted
+          boxShadow: isHighlighted
               ? [
                   BoxShadow(
-                    color: AppColors.softIndigo.withOpacity(0.12),
+                    color: AppColors.softIndigo.withValues(alpha: 0.12),
                     blurRadius: 16,
                   )
                 ]
@@ -1407,19 +1350,19 @@ class _SuggestionTileState extends State<_SuggestionTile> {
               height: 38,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: widget.isHighlighted
+                  colors: isHighlighted
                       ? [
-                          AppColors.softIndigo.withOpacity(0.6),
-                          AppColors.dynamicMint.withOpacity(0.4),
+                          AppColors.softIndigo.withValues(alpha: 0.6),
+                          AppColors.dynamicMint.withValues(alpha: 0.4),
                         ]
                       : (isDark
                           ? [
-                              Colors.white.withOpacity(0.1),
-                              Colors.white.withOpacity(0.06),
+                              Colors.white.withValues(alpha: 0.1),
+                              Colors.white.withValues(alpha: 0.06),
                             ]
                           : [
-                              Colors.black.withOpacity(0.06),
-                              Colors.black.withOpacity(0.04),
+                              Colors.black.withValues(alpha: 0.06),
+                              Colors.black.withValues(alpha: 0.04),
                             ]),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -1427,29 +1370,29 @@ class _SuggestionTileState extends State<_SuggestionTile> {
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
-                widget.icon,
-                color: widget.isHighlighted
+                icon,
+                color: isHighlighted
                     ? Colors.white
-                    : (isDark ? Colors.white.withOpacity(0.6) : AppColors.lightTextPrimary.withOpacity(0.7)),
+                    : (isDark ? Colors.white.withValues(alpha: 0.6) : AppColors.lightTextPrimary.withValues(alpha: 0.7)),
                 size: 17,
               ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                widget.label,
+                label,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: widget.isHighlighted
+                  fontWeight: isHighlighted
                       ? FontWeight.w600
                       : FontWeight.w500,
                   color: isDark
-                      ? Colors.white.withOpacity(widget.isHighlighted ? 0.95 : 0.75)
-                      : AppColors.lightTextPrimary.withOpacity(widget.isHighlighted ? 1.0 : 0.8),
+                      ? Colors.white.withValues(alpha: isHighlighted ? 0.95 : 0.75)
+                      : AppColors.lightTextPrimary.withValues(alpha: isHighlighted ? 1.0 : 0.8),
                 ),
               ),
             ),
-            if (widget.isHighlighted)
+            if (isHighlighted)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -1472,7 +1415,7 @@ class _SuggestionTileState extends State<_SuggestionTile> {
               Icon(
                 PhosphorIconsRegular.arrowRight,
                 size: 16,
-                color: isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
+                color: isDark ? Colors.white.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.3),
               ),
           ],
         ),
@@ -1495,9 +1438,9 @@ class _CapabilityPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04),
+        color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.softIndigo.withOpacity(0.25)),
+        border: Border.all(color: AppColors.softIndigo.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1542,10 +1485,10 @@ class _ChatHistoryDrawerState extends ConsumerState<ChatHistoryDrawer> {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.charcoalGlass.withOpacity(0.92),
+              color: AppColors.charcoalGlass.withValues(alpha: 0.92),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: SafeArea(
               child: Column(
@@ -1648,14 +1591,14 @@ class _ChatHistoryDrawerState extends ConsumerState<ChatHistoryDrawer> {
             hintText: 'Enter new name',
             hintStyle: TextStyle(color: Colors.grey.shade600),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
           ),
         ),
@@ -1707,8 +1650,8 @@ class _ChatHistoryDrawerState extends ConsumerState<ChatHistoryDrawer> {
         filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
         child: Drawer(
           backgroundColor: isDark
-              ? AppColors.deepObsidian.withOpacity(0.88)
-              : Colors.white.withOpacity(0.97),
+              ? AppColors.deepObsidian.withValues(alpha: 0.88)
+              : Colors.white.withValues(alpha: 0.97),
           child: SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1751,27 +1694,27 @@ class _ChatHistoryDrawerState extends ConsumerState<ChatHistoryDrawer> {
                           size: 17),
                       filled: true,
                       fillColor: isDark
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.black.withOpacity(0.04),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.04),
                       contentPadding: EdgeInsets.zero,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
                             color: isDark
-                                ? Colors.white.withOpacity(0.1)
-                                : Colors.black.withOpacity(0.1)),
+                                ? Colors.white.withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.1)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
                             color: isDark
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.black.withOpacity(0.08)),
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.08)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
-                            color: AppColors.softIndigo.withOpacity(0.5)),
+                            color: AppColors.softIndigo.withValues(alpha: 0.5)),
                       ),
                     ),
                   ),
@@ -1791,7 +1734,7 @@ class _ChatHistoryDrawerState extends ConsumerState<ChatHistoryDrawer> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.softIndigo.withOpacity(0.35),
+                          color: AppColors.softIndigo.withValues(alpha: 0.35),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
@@ -1937,14 +1880,14 @@ class _SessionTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
         color: isActive
-            ? AppColors.softIndigo.withOpacity(0.14)
+            ? AppColors.softIndigo.withValues(alpha: 0.14)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(13),
         child: InkWell(
           onTap: onTap,
           onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(13),
-          splashColor: AppColors.softIndigo.withOpacity(0.12),
+          splashColor: AppColors.softIndigo.withValues(alpha: 0.12),
           child: Container(
             decoration: isActive
                 ? BoxDecoration(
@@ -1983,7 +1926,7 @@ class _SessionTile extends StatelessWidget {
                         style: TextStyle(
                           color: isActive
                               ? (isDark ? Colors.white : AppColors.lightTextPrimary)
-                              : (isDark ? Colors.grey.shade300 : AppColors.lightTextPrimary.withOpacity(0.85)),
+                              : (isDark ? Colors.grey.shade300 : AppColors.lightTextPrimary.withValues(alpha: 0.85)),
                           fontSize: 14,
                           fontWeight: isActive
                               ? FontWeight.w600
@@ -2050,17 +1993,18 @@ class _ImageScanButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
+      pressScale: 0.95,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.15 : 0.08),
+          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.35), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -2072,7 +2016,7 @@ class _ImageScanButton extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.18),
+                color: color.withValues(alpha: 0.18),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 22),
@@ -2084,7 +2028,7 @@ class _ImageScanButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white.withOpacity(0.85) : const Color(0xFF1C1E23),
+                color: isDark ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF1C1E23),
                 height: 1.3,
               ),
             ),

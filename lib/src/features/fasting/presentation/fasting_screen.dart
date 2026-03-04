@@ -6,6 +6,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/fasting_provider.dart';
 import '../../../database/models/fasting_doc.dart';
 
@@ -66,7 +67,7 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
       backgroundColor:
           isDark ? AppColors.deepObsidian : AppColors.cloudGray,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -189,7 +190,7 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.4),
+                  color: Colors.grey.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -225,14 +226,14 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.05)
+                            ? Colors.white.withValues(alpha: 0.05)
                             : AppColors.cloudGray,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                             color: (hit
                                     ? AppColors.dynamicMint
                                     : _kFastColor)
-                                .withOpacity(0.2)),
+                                .withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
@@ -243,7 +244,7 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
                               color: (hit
                                       ? AppColors.dynamicMint
                                       : _kFastColor)
-                                  .withOpacity(0.15),
+                                  .withValues(alpha: 0.15),
                               borderRadius:
                                   BorderRadius.circular(12),
                             ),
@@ -277,7 +278,7 @@ class _FastingScreenState extends ConsumerState<FastingScreen>
                                           Theme.of(context)
                                               .colorScheme
                                               .onSurface
-                                              .withOpacity(0.5)),
+                                              .withValues(alpha: 0.5)),
                                 ),
                               ],
                             ),
@@ -374,7 +375,7 @@ class _TimerRing extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: color.withOpacity(0.15 * pulseCtrl.value),
+                            color: color.withValues(alpha: 0.15 * pulseCtrl.value),
                             blurRadius: 60,
                             spreadRadius: 20,
                           ),
@@ -386,7 +387,7 @@ class _TimerRing extends StatelessWidget {
                     size: const Size(240, 240),
                     painter: _RingPainter(
                       progress: 1.0,
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       strokeWidth: 14,
                     ),
                   ),
@@ -425,7 +426,7 @@ class _TimerRing extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
+                            color: color.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -443,13 +444,13 @@ class _TimerRing extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark
-                                ? Colors.white.withOpacity(0.45)
+                                ? Colors.white.withValues(alpha: 0.45)
                                 : AppColors.lightTextSecondary,
                           ),
                         ),
                       ] else ...[
                         Icon(PhosphorIconsFill.timer,
-                            size: 40, color: color.withOpacity(0.5)),
+                            size: 40, color: color.withValues(alpha: 0.5)),
                         const SizedBox(height: 8),
                         Text(
                           'Not Fasting',
@@ -457,7 +458,7 @@ class _TimerRing extends StatelessWidget {
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: isDark
-                                ? Colors.white.withOpacity(0.6)
+                                ? Colors.white.withValues(alpha: 0.6)
                                 : AppColors.lightTextSecondary,
                           ),
                         ),
@@ -536,10 +537,10 @@ class _PhaseTimeline extends StatelessWidget {
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-              color: _kFastColor.withOpacity(isDark ? 0.2 : 0.1)),
+              color: _kFastColor.withValues(alpha: isDark ? 0.2 : 0.1)),
           boxShadow: [
             BoxShadow(
-                color: _kFastColor.withOpacity(0.06),
+                color: _kFastColor.withValues(alpha: 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, 8)),
           ],
@@ -553,7 +554,7 @@ class _PhaseTimeline extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.5,
-                color: _kFastColor.withOpacity(0.8),
+                color: _kFastColor.withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 16),
@@ -564,7 +565,7 @@ class _PhaseTimeline extends StatelessWidget {
                 Container(
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _kFastColor.withOpacity(0.1),
+                    color: _kFastColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -602,12 +603,12 @@ class _PhaseTimeline extends StatelessWidget {
                     horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: isCurrent
-                      ? _kFastColor.withOpacity(0.12)
+                      ? _kFastColor.withValues(alpha: 0.12)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   border: isCurrent
                       ? Border.all(
-                          color: _kFastColor.withOpacity(0.3))
+                          color: _kFastColor.withValues(alpha: 0.3))
                       : null,
                 ),
                 child: Row(
@@ -617,8 +618,8 @@ class _PhaseTimeline extends StatelessWidget {
                       height: 28,
                       decoration: BoxDecoration(
                         color: reached
-                            ? _kFastColor.withOpacity(0.2)
-                            : Colors.grey.withOpacity(0.1),
+                            ? _kFastColor.withValues(alpha: 0.2)
+                            : Colors.grey.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -628,7 +629,7 @@ class _PhaseTimeline extends StatelessWidget {
                         size: 14,
                         color: reached
                             ? _kFastColor
-                            : Colors.grey.withOpacity(0.4),
+                            : Colors.grey.withValues(alpha: 0.4),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -652,7 +653,7 @@ class _PhaseTimeline extends StatelessWidget {
                                           : AppColors
                                               .lightTextPrimary)
                                       : Colors.grey
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                 ),
                               ),
                               const Spacer(),
@@ -663,9 +664,9 @@ class _PhaseTimeline extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                   color: reached
                                       ? _kFastColor
-                                          .withOpacity(0.8)
+                                          .withValues(alpha: 0.8)
                                       : Colors.grey
-                                          .withOpacity(0.4),
+                                          .withValues(alpha: 0.4),
                                 ),
                               ),
                             ],
@@ -680,7 +681,7 @@ class _PhaseTimeline extends StatelessWidget {
                                   fontSize: 11,
                                   color: isDark
                                       ? Colors.white
-                                          .withOpacity(0.55)
+                                          .withValues(alpha: 0.55)
                                       : AppColors
                                           .lightTextSecondary,
                                   height: 1.4,
@@ -727,7 +728,7 @@ class _StartFastSectionState extends ConsumerState<_StartFastSection> {
             itemBuilder: (_, i) {
               final (name, _, __) = _protocols[i];
               final isSel = i == _selectedIndex;
-              return GestureDetector(
+              return AppAnimatedPressable(
                 onTap: () {
                   HapticFeedback.selectionClick();
                   setState(() => _selectedIndex = i);
@@ -740,12 +741,12 @@ class _StartFastSectionState extends ConsumerState<_StartFastSection> {
                   decoration: BoxDecoration(
                     color: isSel
                         ? _kFastColor
-                        : _kFastColor.withOpacity(0.1),
+                        : _kFastColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: isSel
                         ? [
                             BoxShadow(
-                                color: _kFastColor.withOpacity(0.4),
+                                color: _kFastColor.withValues(alpha: 0.4),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4))
                           ]
@@ -773,7 +774,7 @@ class _StartFastSectionState extends ConsumerState<_StartFastSection> {
           style: TextStyle(
             fontSize: 12,
             color: widget.isDark
-                ? Colors.white.withOpacity(0.5)
+                ? Colors.white.withValues(alpha: 0.5)
                 : AppColors.lightTextSecondary,
           ),
           textAlign: TextAlign.center,
@@ -802,7 +803,7 @@ class _StartFastSectionState extends ConsumerState<_StartFastSection> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
               elevation: 8,
-              shadowColor: _kFastColor.withOpacity(0.4),
+              shadowColor: _kFastColor.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -860,7 +861,7 @@ class _EndFastButton extends ConsumerWidget {
                 TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.danger,
-          side: BorderSide(color: AppColors.danger.withOpacity(0.6)),
+          side: BorderSide(color: AppColors.danger.withValues(alpha: 0.6)),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18)),
         ),
@@ -937,10 +938,10 @@ class _StatChip extends StatelessWidget {
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: color.withOpacity(isDark ? 0.2 : 0.1)),
+              color: color.withValues(alpha: isDark ? 0.2 : 0.1)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+                color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
                 blurRadius: 12,
                 offset: const Offset(0, 4))
           ],
@@ -952,7 +953,7 @@ class _StatChip extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
-                    color: color.withOpacity(0.7))),
+                    color: color.withValues(alpha: 0.7))),
             const SizedBox(height: 4),
             Text(value,
                 style: TextStyle(
@@ -1006,11 +1007,11 @@ class _RecentHistory extends StatelessWidget {
                     color: (s.hitTarget
                             ? AppColors.dynamicMint
                             : _kFastColor)
-                        .withOpacity(0.15)),
+                        .withValues(alpha: 0.15)),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black
-                          .withOpacity(isDark ? 0 : 0.04),
+                          .withValues(alpha: isDark ? 0 : 0.04),
                       blurRadius: 12,
                       offset: const Offset(0, 4))
                 ],
@@ -1024,7 +1025,7 @@ class _RecentHistory extends StatelessWidget {
                       color: (s.hitTarget
                               ? AppColors.dynamicMint
                               : _kFastColor)
-                          .withOpacity(0.12),
+                          .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -1055,7 +1056,7 @@ class _RecentHistory extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.45)),
+                                  .withValues(alpha: 0.45)),
                         ),
                       ],
                     ),
@@ -1080,7 +1081,7 @@ class _RecentHistory extends StatelessWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.4)),
+                                .withValues(alpha: 0.4)),
                       ),
                     ],
                   ),
@@ -1134,13 +1135,13 @@ class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
             height: 44,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
+              physics: scrollPhysics,
               children: FastingPhase.values.map((p) {
                 final isCurrent = p == widget.currentPhase;
                 final reached = widget.elapsedHours >= p.startsAtHours;
                 final color = _phaseColors[p] ?? _kFastColor;
 
-                return GestureDetector(
+                return AppAnimatedPressable(
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() {
@@ -1156,20 +1157,20 @@ class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
                       color: isCurrent
                           ? color
                           : reached
-                              ? color.withOpacity(0.15)
-                              : Colors.grey.withOpacity(widget.isDark ? 0.12 : 0.08),
+                              ? color.withValues(alpha: 0.15)
+                              : Colors.grey.withValues(alpha: widget.isDark ? 0.12 : 0.08),
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: isCurrent
                           ? [
                               BoxShadow(
-                                color: color.withOpacity(0.45),
+                                color: color.withValues(alpha: 0.45),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
                             ]
                           : null,
                       border: reached && !isCurrent
-                          ? Border.all(color: color.withOpacity(0.35))
+                          ? Border.all(color: color.withValues(alpha: 0.35))
                           : null,
                     ),
                     child: Row(
@@ -1195,7 +1196,7 @@ class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
                                 ? Colors.white
                                 : reached
                                     ? color
-                                    : Colors.grey.withOpacity(
+                                    : Colors.grey.withValues(alpha: 
                                         widget.isDark ? 0.5 : 0.45),
                           ),
                         ),
@@ -1217,11 +1218,11 @@ class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
                     horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: (_phaseColors[_tooltip!] ?? _kFastColor)
-                      .withOpacity(0.12),
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: (_phaseColors[_tooltip!] ?? _kFastColor)
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -1230,7 +1231,7 @@ class _HorizontalPhaseChipsState extends State<_HorizontalPhaseChips> {
                     fontSize: 12,
                     height: 1.4,
                     color: widget.isDark
-                        ? Colors.white.withOpacity(0.75)
+                        ? Colors.white.withValues(alpha: 0.75)
                         : AppColors.lightTextPrimary,
                   ),
                 ),
@@ -1295,10 +1296,10 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
           color: widget.isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: _kFastColor.withOpacity(widget.isDark ? 0.2 : 0.1)),
+              color: _kFastColor.withValues(alpha: widget.isDark ? 0.2 : 0.1)),
           boxShadow: [
             BoxShadow(
-              color: _kFastColor.withOpacity(0.05),
+              color: _kFastColor.withValues(alpha: 0.05),
               blurRadius: 14,
               offset: const Offset(0, 6),
             ),
@@ -1312,7 +1313,7 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: _kFastColor.withOpacity(0.12),
+                    color: _kFastColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(PhosphorIconsFill.chartBar,
@@ -1325,7 +1326,7 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.3,
-                    color: _kFastColor.withOpacity(0.8),
+                    color: _kFastColor.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -1346,7 +1347,7 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
                   const names = ['Su', 'M', 'T', 'W', 'Th', 'F', 'Sa'];
                   final dayLabel = names[s.startTime.weekday % 7];
 
-                  return GestureDetector(
+                  return AppAnimatedPressable(
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() => _tappedIndex = isTapped ? null : i);
@@ -1360,10 +1361,10 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                              color: barColor.withOpacity(0.15),
+                              color: barColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                  color: barColor.withOpacity(0.35)),
+                                  color: barColor.withValues(alpha: 0.35)),
                             ),
                             child: Text(
                               '${s.durationHours.toStringAsFixed(1)}h',
@@ -1382,13 +1383,13 @@ class _FastingMiniBarChartState extends State<_FastingMiniBarChart>
                             decoration: BoxDecoration(
                               color: s.hitTarget
                                   ? barColor
-                                  : barColor.withOpacity(0.4),
+                                  : barColor.withValues(alpha: 0.4),
                               borderRadius: const BorderRadius.vertical(
                                   top: Radius.circular(5)),
                               boxShadow: s.hitTarget
                                   ? [
                                       BoxShadow(
-                                        color: barColor.withOpacity(0.4),
+                                        color: barColor.withValues(alpha: 0.4),
                                         blurRadius: 6,
                                       )
                                     ]
@@ -1452,7 +1453,7 @@ class _LegendDot extends StatelessWidget {
         Text(label,
             style: TextStyle(
                 fontSize: 9,
-                color: Colors.grey.withOpacity(0.7),
+                color: Colors.grey.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500)),
       ],
     );

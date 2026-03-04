@@ -6,6 +6,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/body_provider.dart';
 import '../../../database/models/body_entry_doc.dart';
 import '../../../features/profile/application/user_provider.dart';
@@ -68,7 +69,7 @@ class _BodyCompositionScreenState extends ConsumerState<BodyCompositionScreen>
     return Scaffold(
       backgroundColor: isDark ? AppColors.deepObsidian : AppColors.cloudGray,
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           SliverAppBar(
             pinned: true,
@@ -227,7 +228,7 @@ class _BodyCompositionScreenState extends ConsumerState<BodyCompositionScreen>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.35),
+                    color: Colors.grey.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -257,7 +258,7 @@ class _BodyCompositionScreenState extends ConsumerState<BodyCompositionScreen>
                   labelText: 'Goal Weight (kg)',
                   filled: true,
                   fillColor: isDark
-                      ? Colors.white.withOpacity(0.05)
+                      ? Colors.white.withValues(alpha: 0.05)
                       : AppColors.cloudGray,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
@@ -282,7 +283,7 @@ class _BodyCompositionScreenState extends ConsumerState<BodyCompositionScreen>
                             'Goal weight set to ${v.toStringAsFixed(1)} kg ✓'),
                         duration: const Duration(seconds: 2),
                         behavior: SnackBarBehavior.floating,
-                        backgroundColor: _kBodyColor.withOpacity(0.9),
+                        backgroundColor: _kBodyColor.withValues(alpha: 0.9),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         margin:
@@ -296,7 +297,7 @@ class _BodyCompositionScreenState extends ConsumerState<BodyCompositionScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 4,
-                    shadowColor: _kBodyColor.withOpacity(0.4),
+                    shadowColor: _kBodyColor.withValues(alpha: 0.4),
                   ),
                   child: const Text('Save Goal',
                       style: TextStyle(
@@ -343,7 +344,7 @@ class _MetricChipRow extends StatelessWidget {
           final isSelected = selected == metric;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
+            child: AppAnimatedPressable(
               onTap: () {
                 HapticFeedback.selectionClick();
                 onSelect(metric);
@@ -355,16 +356,16 @@ class _MetricChipRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? _kBodyColor
-                      : _kBodyColor.withOpacity(0.1),
+                      : _kBodyColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: isSelected
                       ? null
                       : Border.all(
-                          color: _kBodyColor.withOpacity(0.25)),
+                          color: _kBodyColor.withValues(alpha: 0.25)),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: _kBodyColor.withOpacity(0.35),
+                            color: _kBodyColor.withValues(alpha: 0.35),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           )
@@ -464,10 +465,10 @@ class _MetricChart extends StatelessWidget {
             color: isDark ? AppColors.charcoalGlass : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-                color: color.withOpacity(isDark ? 0.15 : 0.1)),
+                color: color.withValues(alpha: isDark ? 0.15 : 0.1)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+                color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -482,7 +483,7 @@ class _MetricChart extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                 ),
               ),
               const SizedBox(height: 4),
@@ -491,7 +492,7 @@ class _MetricChart extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark
-                      ? Colors.white.withOpacity(0.4)
+                      ? Colors.white.withValues(alpha: 0.4)
                       : AppColors.lightTextSecondary,
                 ),
               ),
@@ -519,7 +520,7 @@ class _MetricChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: isDark
-                          ? Colors.white.withOpacity(0.3)
+                          ? Colors.white.withValues(alpha: 0.3)
                           : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -528,7 +529,7 @@ class _MetricChart extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       color: isDark
-                          ? Colors.white.withOpacity(0.3)
+                          ? Colors.white.withValues(alpha: 0.3)
                           : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -597,7 +598,7 @@ class _BmiBanner extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.35),
+                color: Colors.grey.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -608,9 +609,9 @@ class _BmiBanner extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(
                   horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.25)),
+                border: Border.all(color: color.withValues(alpha: 0.25)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -631,7 +632,7 @@ class _BmiBanner extends ConsumerWidget {
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: color.withOpacity(0.7))),
+                              color: color.withValues(alpha: 0.7))),
                       Text(
                         category,
                         style: TextStyle(
@@ -657,11 +658,11 @@ class _BmiBanner extends ConsumerWidget {
                       horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? c.$4.withOpacity(0.15)
+                        ? c.$4.withValues(alpha: 0.15)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                     border: isActive
-                        ? Border.all(color: c.$4.withOpacity(0.4))
+                        ? Border.all(color: c.$4.withValues(alpha: 0.4))
                         : null,
                   ),
                   child: Row(
@@ -684,7 +685,7 @@ class _BmiBanner extends ConsumerWidget {
                           color: isActive
                               ? c.$4
                               : (isDark
-                                  ? Colors.white.withOpacity(0.6)
+                                  ? Colors.white.withValues(alpha: 0.6)
                                   : AppColors.lightTextSecondary),
                         ),
                       ),
@@ -696,7 +697,7 @@ class _BmiBanner extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 12,
                           color: isDark
-                              ? Colors.white.withOpacity(0.45)
+                              ? Colors.white.withValues(alpha: 0.45)
                               : AppColors.lightTextSecondary,
                         ),
                       ),
@@ -722,10 +723,10 @@ class _BmiBanner extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.softIndigo.withOpacity(0.08),
+                color: AppColors.softIndigo.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                    color: AppColors.softIndigo.withOpacity(0.2)),
+                    color: AppColors.softIndigo.withValues(alpha: 0.2)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,7 +740,7 @@ class _BmiBanner extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark
-                            ? Colors.white.withOpacity(0.75)
+                            ? Colors.white.withValues(alpha: 0.75)
                             : AppColors.lightTextSecondary,
                         height: 1.5,
                       ),
@@ -774,17 +775,17 @@ class _BmiBanner extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
+      child: AppAnimatedPressable(
         onTap: () => _showBmiModal(context),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: isDark ? AppColors.charcoalGlass : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 blurRadius: 16,
                 offset: const Offset(0, 5),
               ),
@@ -798,7 +799,7 @@ class _BmiBanner extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(PhosphorIconsFill.heartbeat,
@@ -811,7 +812,7 @@ class _BmiBanner extends ConsumerWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
-                      color: color.withOpacity(0.8),
+                      color: color.withValues(alpha: 0.8),
                     ),
                   ),
                   const Spacer(),
@@ -830,7 +831,7 @@ class _BmiBanner extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
+                          color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -888,7 +889,7 @@ class _BmiBanner extends ConsumerWidget {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: color.withOpacity(0.5),
+                              color: color.withValues(alpha: 0.5),
                               blurRadius: 6,
                             ),
                           ],
@@ -907,31 +908,31 @@ class _BmiBanner extends ConsumerWidget {
                       style: TextStyle(
                           fontSize: 9,
                           color: isDark
-                              ? Colors.white.withOpacity(0.3)
+                              ? Colors.white.withValues(alpha: 0.3)
                               : AppColors.lightTextSecondary)),
                   Text('18.5',
                       style: TextStyle(
                           fontSize: 9,
                           color: isDark
-                              ? Colors.white.withOpacity(0.3)
+                              ? Colors.white.withValues(alpha: 0.3)
                               : AppColors.lightTextSecondary)),
                   Text('25',
                       style: TextStyle(
                           fontSize: 9,
                           color: isDark
-                              ? Colors.white.withOpacity(0.3)
+                              ? Colors.white.withValues(alpha: 0.3)
                               : AppColors.lightTextSecondary)),
                   Text('30',
                       style: TextStyle(
                           fontSize: 9,
                           color: isDark
-                              ? Colors.white.withOpacity(0.3)
+                              ? Colors.white.withValues(alpha: 0.3)
                               : AppColors.lightTextSecondary)),
                   Text('40',
                       style: TextStyle(
                           fontSize: 9,
                           color: isDark
-                              ? Colors.white.withOpacity(0.3)
+                              ? Colors.white.withValues(alpha: 0.3)
                               : AppColors.lightTextSecondary)),
                 ],
               ),
@@ -941,7 +942,7 @@ class _BmiBanner extends ConsumerWidget {
                   Icon(PhosphorIconsRegular.info,
                       size: 12,
                       color: isDark
-                          ? Colors.white.withOpacity(0.3)
+                          ? Colors.white.withValues(alpha: 0.3)
                           : AppColors.lightTextSecondary),
                   const SizedBox(width: 6),
                   Text(
@@ -949,7 +950,7 @@ class _BmiBanner extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
-                          ? Colors.white.withOpacity(0.35)
+                          ? Colors.white.withValues(alpha: 0.35)
                           : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -1017,10 +1018,10 @@ class _GoalWeightCard extends StatelessWidget {
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: _kBodyColor.withOpacity(isDark ? 0.2 : 0.15)),
+              color: _kBodyColor.withValues(alpha: isDark ? 0.2 : 0.15)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+              color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
               blurRadius: 14,
               offset: const Offset(0, 5),
             ),
@@ -1034,7 +1035,7 @@ class _GoalWeightCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: _kBodyColor.withOpacity(0.12),
+                    color: _kBodyColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(PhosphorIconsFill.target,
@@ -1047,7 +1048,7 @@ class _GoalWeightCard extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.3,
-                    color: _kBodyColor.withOpacity(0.8),
+                    color: _kBodyColor.withValues(alpha: 0.8),
                   ),
                 ),
                 const Spacer(),
@@ -1056,7 +1057,7 @@ class _GoalWeightCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.dynamicMint.withOpacity(0.15),
+                      color: AppColors.dynamicMint.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
@@ -1082,7 +1083,7 @@ class _GoalWeightCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           color: isDark
-                              ? Colors.white.withOpacity(0.45)
+                              ? Colors.white.withValues(alpha: 0.45)
                               : AppColors.lightTextSecondary,
                         )),
                     Text(
@@ -1113,7 +1114,7 @@ class _GoalWeightCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           color: isDark
-                              ? Colors.white.withOpacity(0.45)
+                              ? Colors.white.withValues(alpha: 0.45)
                               : AppColors.lightTextSecondary,
                         )),
                     Text(
@@ -1135,7 +1136,7 @@ class _GoalWeightCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: isDark
-                                ? Colors.white.withOpacity(0.45)
+                                ? Colors.white.withValues(alpha: 0.45)
                                 : AppColors.lightTextSecondary,
                           )),
                       Text(
@@ -1144,7 +1145,7 @@ class _GoalWeightCard extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: isDark
-                              ? Colors.white.withOpacity(0.8)
+                              ? Colors.white.withValues(alpha: 0.8)
                               : AppColors.lightTextPrimary,
                         ),
                       ),
@@ -1165,7 +1166,7 @@ class _GoalWeightCard extends StatelessWidget {
                   Container(
                     height: 10,
                     decoration: BoxDecoration(
-                      color: _kBodyColor.withOpacity(0.12),
+                      color: _kBodyColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -1180,12 +1181,12 @@ class _GoalWeightCard extends StatelessWidget {
                                   AppColors.dynamicMint,
                                   AppColors.dynamicMint
                                 ]
-                              : [_kBodyColor, _kBodyColor.withOpacity(0.7)],
+                              : [_kBodyColor, _kBodyColor.withValues(alpha: 0.7)],
                         ),
                         borderRadius: BorderRadius.circular(5),
                         boxShadow: [
                           BoxShadow(
-                            color: _kBodyColor.withOpacity(0.4),
+                            color: _kBodyColor.withValues(alpha: 0.4),
                             blurRadius: 6,
                           ),
                         ],
@@ -1213,7 +1214,7 @@ class _GoalWeightCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark
-                          ? Colors.white.withOpacity(0.4)
+                          ? Colors.white.withValues(alpha: 0.4)
                           : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -1258,10 +1259,10 @@ class _StatsHero extends ConsumerWidget {
           ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-              color: _kBodyColor.withOpacity(isDark ? 0.25 : 0.3)),
+              color: _kBodyColor.withValues(alpha: isDark ? 0.25 : 0.3)),
           boxShadow: [
             BoxShadow(
-              color: _kBodyColor.withOpacity(0.12),
+              color: _kBodyColor.withValues(alpha: 0.12),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -1274,7 +1275,7 @@ class _StatsHero extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _kBodyColor.withOpacity(0.15),
+                    color: _kBodyColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(PhosphorIconsFill.scales,
@@ -1290,7 +1291,7 @@ class _StatsHero extends ConsumerWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.4,
-                        color: _kBodyColor.withOpacity(0.7),
+                        color: _kBodyColor.withValues(alpha: 0.7),
                       ),
                     ),
                     Text(
@@ -1315,7 +1316,7 @@ class _StatsHero extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 12,
                       color: isDark
-                          ? Colors.white.withOpacity(0.4)
+                          ? Colors.white.withValues(alpha: 0.4)
                           : AppColors.lightTextSecondary,
                     ),
                   ),
@@ -1332,7 +1333,7 @@ class _StatsHero extends ConsumerWidget {
                   '${entries.length} logs',
                   style: TextStyle(
                     fontSize: 12,
-                    color: _kBodyColor.withOpacity(0.7),
+                    color: _kBodyColor.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1365,13 +1366,13 @@ class _DeltaChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: delta == 0
-            ? Colors.grey.withOpacity(0.1)
-            : color.withOpacity(0.1),
+            ? Colors.grey.withValues(alpha: 0.1)
+            : color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: delta == 0
-              ? Colors.grey.withOpacity(0.2)
-              : color.withOpacity(0.25),
+              ? Colors.grey.withValues(alpha: 0.2)
+              : color.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
@@ -1443,7 +1444,7 @@ class _LineChartPainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [color.withOpacity(0.25), color.withOpacity(0.0)],
+        colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(fillPath, fillPaint);
 
@@ -1552,10 +1553,10 @@ class _MeasureCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.charcoalGlass : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(isDark ? 0.2 : 0.15)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.2 : 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1582,7 +1583,7 @@ class _MeasureCard extends StatelessWidget {
               fontSize: 9,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-              color: color.withOpacity(0.7),
+              color: color.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -1628,7 +1629,7 @@ class _HistoryList extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 20),
                 decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.15),
+                  color: AppColors.danger.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(PhosphorIconsFill.trash,
@@ -1642,10 +1643,10 @@ class _HistoryList extends StatelessWidget {
                   color: isDark ? AppColors.charcoalGlass : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                      color: _kBodyColor.withOpacity(isDark ? 0.12 : 0.1)),
+                      color: _kBodyColor.withValues(alpha: isDark ? 0.12 : 0.1)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0 : 0.04),
+                      color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -1657,7 +1658,7 @@ class _HistoryList extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: _kBodyColor.withOpacity(0.12),
+                        color: _kBodyColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(PhosphorIconsFill.scales,
@@ -1681,7 +1682,7 @@ class _HistoryList extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.45),
+                                  .withValues(alpha: 0.45),
                             ),
                           ),
                         ],
@@ -1736,7 +1737,7 @@ class _EmptyState extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _kBodyColor.withOpacity(0.12),
+              color: _kBodyColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(PhosphorIconsFill.scales,
@@ -1760,7 +1761,7 @@ class _EmptyState extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               color: isDark
-                  ? Colors.white.withOpacity(0.45)
+                  ? Colors.white.withValues(alpha: 0.45)
                   : AppColors.lightTextSecondary,
               height: 1.5,
             ),
@@ -1780,7 +1781,7 @@ class _EmptyState extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 elevation: 6,
-                shadowColor: _kBodyColor.withOpacity(0.4),
+                shadowColor: _kBodyColor.withValues(alpha: 0.4),
               ),
             ),
           ),
@@ -1865,7 +1866,7 @@ class _LogEntrySheetState extends ConsumerState<_LogEntrySheet> {
         content: Text('${weight.toStringAsFixed(1)} kg logged ✓'),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: _kBodyColor.withOpacity(0.9),
+        backgroundColor: _kBodyColor.withValues(alpha: 0.9),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -1893,7 +1894,7 @@ class _LogEntrySheetState extends ConsumerState<_LogEntrySheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.35),
+                color: Colors.grey.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1952,10 +1953,10 @@ class _LogEntrySheetState extends ConsumerState<_LogEntrySheet> {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.35)),
+                              .withValues(alpha: 0.35)),
                       filled: true,
                       fillColor: widget.isDark
-                          ? Colors.white.withOpacity(0.05)
+                          ? Colors.white.withValues(alpha: 0.05)
                           : AppColors.cloudGray,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -1975,7 +1976,7 @@ class _LogEntrySheetState extends ConsumerState<_LogEntrySheet> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18)),
                         elevation: 6,
-                        shadowColor: _kBodyColor.withOpacity(0.4),
+                        shadowColor: _kBodyColor.withValues(alpha: 0.4),
                       ),
                       child: _saving
                           ? const SizedBox(
@@ -2015,7 +2016,7 @@ class _FieldLabel extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
           letterSpacing: 0.3,
         ),
       ),
@@ -2040,10 +2041,10 @@ class _NumField extends StatelessWidget {
         hintText: hint,
         hintStyle: TextStyle(
             color:
-                Theme.of(context).colorScheme.onSurface.withOpacity(0.35)),
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35)),
         filled: true,
         fillColor:
-            isDark ? Colors.white.withOpacity(0.05) : AppColors.cloudGray,
+            isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.cloudGray,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,

@@ -61,7 +61,7 @@ class _WorkoutPlanCardState extends ConsumerState<WorkoutPlanCard> {
             content: Text('${plan.title} saved to My Plans ✓'),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.dynamicMint.withOpacity(0.9),
+            backgroundColor: AppColors.dynamicMint.withValues(alpha: 0.9),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),

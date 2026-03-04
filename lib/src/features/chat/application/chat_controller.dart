@@ -126,6 +126,32 @@ class ChatController extends Notifier<ChatSessionDoc?> {
     String? responseText;
 
       if (isOffline) {
+        // ── Check if model actually installed ────────────────────────────────
+        final selectedInfo = ref.read(selectedOfflineModelProvider);
+        final isInstalled = await ref
+            .read(gemmaServiceProvider)
+            .isOfflineModelInstalled(selectedInfo);
+
+        if (!isInstalled) {
+          // Model is not downlaoded — inject system prompt with download button
+          final setupMsg = ChatMessageDoc()
+            ..text =
+                "You are currently in **Offline Mode**, but no AI model has been downloaded yet.\n\n"
+                "To chat without internet, you must download a small, secure AI model entirely to your device."
+            ..isUser = false
+            ..isWidget = true
+            ..widgetType = 'offline_setup'
+            ..timestamp = DateTime.now();
+
+          currentSession.messages =
+              List<ChatMessageDoc>.from(currentSession.messages)..add(setupMsg);
+          currentSession.updatedAt = DateTime.now();
+          await isar.writeTxn(() async => isar.chatSessionDocs.put(currentSession));
+          state = currentSession;
+          ref.read(chatTypingProvider.notifier).state = false;
+          return;
+        }
+
         // ── On-device Gemma path ───────────────────────────────────────────────
         try {
           final isFirstMessage = currentSession.messages.length == 1;

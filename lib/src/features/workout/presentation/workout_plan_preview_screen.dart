@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 
 import '../domain/workout_plan_model.dart';
 import '../domain/exercise_model.dart';
@@ -183,7 +184,7 @@ class _WorkoutPlanPreviewScreenState
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [accent.withOpacity(0.4), const Color(0xFF07090F)],
+                  colors: [accent.withValues(alpha: 0.4), const Color(0xFF07090F)],
                   begin: Alignment.topCenter, end: Alignment.bottomCenter,
                 ),
               ),
@@ -221,7 +222,7 @@ class _WorkoutPlanPreviewScreenState
                       const SizedBox(height: 8),
                       Text(
                         _summary!,
-                        style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
                         maxLines: 2, overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -257,7 +258,7 @@ class _WorkoutPlanPreviewScreenState
   Widget _buildDayView(WorkoutDayData day, AsyncValue<List<ExerciseModel>> dbAsync) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-      physics: const BouncingScrollPhysics(),
+      physics: scrollPhysics,
       itemCount: day.exercises.length,
       itemBuilder: (context, index) {
         final ex = day.exercises[index];
@@ -282,8 +283,8 @@ class _WorkoutPlanPreviewScreenState
         child: Container(
           padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
-            color: const Color(0xFF07090F).withOpacity(0.8),
-            border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
+            color: const Color(0xFF07090F).withValues(alpha: 0.8),
+            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
           ),
           child: Row(
             children: [
@@ -338,15 +339,15 @@ class _ExerciseCardState extends State<_ExerciseCard> {
     final ex = widget.exercise;
     final matched = widget.matched;
 
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () { HapticFeedback.selectionClick(); setState(() => _expanded = !_expanded); },
       child: AnimatedContainer(
         duration: 300.ms,
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(_expanded ? 0.08 : 0.04),
+          color: Colors.white.withValues(alpha: _expanded ? 0.08 : 0.04),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: _expanded ? widget.accent.withOpacity(0.4) : Colors.white.withOpacity(0.05), width: _expanded ? 2 : 1),
+          border: Border.all(color: _expanded ? widget.accent.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05), width: _expanded ? 2 : 1),
         ),
         child: Column(
           children: [
@@ -384,7 +385,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Divider(height: 1, color: Colors.white.withOpacity(0.1)),
+                  Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
                   _buildVisualContent(matched?.gifUrl, matched),
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -394,7 +395,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                         if (ex.notes != null && ex.notes!.isNotEmpty) ...[
                           Row(children: [Icon(PhosphorIconsFill.notepad, color: widget.accent, size: 14), const SizedBox(width: 8), const Text('COACH NOTES', style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1))]),
                           const SizedBox(height: 6),
-                          Text(ex.notes!, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13, height: 1.5)),
+                          Text(ex.notes!, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, height: 1.5)),
                           const SizedBox(height: 20),
                         ],
                         const Text('TARGET MUSCLES', style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
@@ -435,7 +436,7 @@ class _StatPill extends StatelessWidget {
   const _StatPill(this.label, this.color);
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)));
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)));
   }
 }
 
@@ -445,7 +446,7 @@ class _MusclePill extends StatelessWidget {
   const _MusclePill({required this.label, required this.color});
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.1))), child: Text(label.toUpperCase(), style: TextStyle(color: color.withOpacity(0.8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5)));
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withValues(alpha: 0.1))), child: Text(label.toUpperCase(), style: TextStyle(color: color.withValues(alpha: 0.8), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5)));
   }
 }
 
@@ -456,7 +457,7 @@ class _ModeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isGym = mode == 'gym';
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: accent.withOpacity(0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: accent.withOpacity(0.3))), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(isGym ? PhosphorIconsFill.barbell : PhosphorIconsFill.house, color: accent, size: 12), const SizedBox(width: 6), Text(isGym ? 'GYM' : 'HOME', style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1))]));
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: accent.withValues(alpha: 0.3))), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(isGym ? PhosphorIconsFill.barbell : PhosphorIconsFill.house, color: accent, size: 12), const SizedBox(width: 6), Text(isGym ? 'GYM' : 'HOME', style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1))]));
   }
 }
 
@@ -466,7 +467,7 @@ class _InfoBadge extends StatelessWidget {
   const _InfoBadge({required this.icon, required this.label});
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, color: Colors.white54, size: 12), const SizedBox(width: 6), Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800))]));
+    return Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, color: Colors.white54, size: 12), const SizedBox(width: 6), Text(label, style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800))]));
   }
 }
 
@@ -481,11 +482,11 @@ class _BottomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: onTap,
       child: Container(
         height: 58,
-        decoration: BoxDecoration(gradient: filled ? fillGradient : null, color: filled ? null : Colors.white.withOpacity(0.06), borderRadius: BorderRadius.circular(20), border: filled ? null : Border.all(color: Colors.white.withOpacity(0.1)), boxShadow: filled && fillGradient != null ? [BoxShadow(color: fillGradient!.colors.first.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 8))] : null),
+        decoration: BoxDecoration(gradient: filled ? fillGradient : null, color: filled ? null : Colors.white.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(20), border: filled ? null : Border.all(color: Colors.white.withValues(alpha: 0.1)), boxShadow: filled && fillGradient != null ? [BoxShadow(color: fillGradient!.colors.first.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))] : null),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: color, size: 20), const SizedBox(width: 10), Text(label, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1))]),
       ),
     );

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import '../application/habit_provider.dart';
 import '../application/habit_insight_provider.dart';
 import '../../../database/models/habit_doc.dart';
@@ -150,6 +152,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
   int _selectedDayIndex = DateTime.now().weekday - 1;
   // Track collapsed categories
   final Set<String> _collapsedCategories = {};
+  // Category pill filter — null = 'All'
+  String? _selectedCategory;
 
   // Today's weekday index (0 = Mon)
   int get _todayIndex => DateTime.now().weekday - 1;
@@ -218,24 +222,53 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         ],
       ).animate().fade(delay: 400.ms),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         padding: const EdgeInsets.only(bottom: 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDatePicker(isDark),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            // Amber streak banner (shown when streak >= 2)
+            if (streak >= 2) _StreakBanner(streak: streak),
+            if (streak >= 2) const SizedBox(height: 16),
             _buildProgressSummary(context, completed, habits.length, isDark),
             const SizedBox(height: 20),
             _buildStreakHeatmap(isDark, streak),
             const SizedBox(height: 20),
             _HabitAiInsightCard(),
             const SizedBox(height: 20),
+            // AppPillTabBar for category filtering
+            _buildCategoryPillBar(habits),
+            const SizedBox(height: 16),
             _buildCategorisedHabitsList(context, habits, isDark),
           ],
         ),
       ),
     ),
+    );
+  }
+
+  // ── Category Pill Bar ────────────────────────────────────────────────────────
+  Widget _buildCategoryPillBar(List<HabitDoc> habits) {
+    // Build unique category list from current habits, prepend 'all'
+    final cats = habits.map((h) => h.category).toSet().toList();
+    if (cats.isEmpty) return const SizedBox.shrink();
+
+    final allTabs = ['All', ...cats.map((c) => _categoryLabel(c))];
+    final selectedIdx = _selectedCategory == null
+        ? 0
+        : cats.indexOf(_selectedCategory!) + 1;
+
+    return AppPillTabBar(
+      tabs: allTabs,
+      selectedIndex: selectedIdx.clamp(0, allTabs.length - 1),
+      onChanged: (i) {
+        setState(() {
+          _selectedCategory = i == 0 ? null : cats[i - 1];
+        });
+      },
+      activeColor: AppColors.softIndigo,
     );
   }
 
@@ -248,6 +281,31 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         : '${_days[_selectedDayIndex]}, ${monthNames[selDate.month - 1]} ${selDate.day} — $completed of $total habits completed';
 
     return AppBar(
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.05),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            PhosphorIconsRegular.arrowLeft,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : AppColors.lightTextPrimary,
+            size: 18,
+          ),
+        ),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/dashboard');
+          }
+        },
+      ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -260,7 +318,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.softIndigo.withOpacity(0.15),
+                    color: AppColors.softIndigo.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text('History',
@@ -279,7 +337,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               key: ValueKey(dateLabel),
               style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
             ),
           ),
         ],
@@ -318,10 +376,10 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               allDone ? PhosphorIconsFill.checkCircle : PhosphorIconsFill.xCircle,
               size: 10,
               color: isSelected
-                  ? Colors.white.withOpacity(0.85)
+                  ? Colors.white.withValues(alpha: 0.85)
                   : allDone
-                      ? AppColors.dynamicMint.withOpacity(0.85)
-                      : AppColors.danger.withOpacity(0.6),
+                      ? AppColors.dynamicMint.withValues(alpha: 0.85)
+                      : AppColors.danger.withValues(alpha: 0.6),
             );
           } else if (isToday && !isSelected) {
             historyIndicator = Container(
@@ -329,11 +387,11 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
               decoration: BoxDecoration(
                   color: AppColors.softIndigo,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: AppColors.softIndigo.withOpacity(0.5), blurRadius: 4)]),
+                  boxShadow: [BoxShadow(color: AppColors.softIndigo.withValues(alpha: 0.5), blurRadius: 4)]),
             );
           }
 
-          return GestureDetector(
+          return AppAnimatedPressable(
             onTap: () {
               HapticFeedback.selectionClick();
               setState(() => _selectedDayIndex = index);
@@ -346,13 +404,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 color: isSelected
                     ? AppColors.softIndigo
                     : isPast && !isSelected
-                        ? (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06))
+                        ? (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06))
                         : isFuture
-                            ? (isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02))
-                            : isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04),
+                            ? (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.black.withValues(alpha: 0.02))
+                            : isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: isSelected
-                    ? [BoxShadow(color: AppColors.softIndigo.withOpacity(0.5), blurRadius: 12, offset: const Offset(0, 4))]
+                    ? [BoxShadow(color: AppColors.softIndigo.withValues(alpha: 0.5), blurRadius: 12, offset: const Offset(0, 4))]
                     : null,
               ),
               child: Column(
@@ -364,8 +422,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           color: isSelected
                               ? Colors.white
                               : isFuture
-                                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.2)
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2)
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
                   const SizedBox(height: 6),
                   Text(_dates[index],
                       style: TextStyle(
@@ -374,8 +432,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           color: isSelected
                               ? Colors.white
                               : isFuture
-                                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.25)
-                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25)
+                                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
                   const SizedBox(height: 4),
                   historyIndicator,
                 ],
@@ -403,8 +461,8 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.softIndigo.withOpacity(isDark ? 0.2 : 0.1)),
-          boxShadow: [BoxShadow(color: AppColors.softIndigo.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))],
+          border: Border.all(color: AppColors.softIndigo.withValues(alpha: isDark ? 0.2 : 0.1)),
+          boxShadow: [BoxShadow(color: AppColors.softIndigo.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: Row(
           children: [
@@ -420,7 +478,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                     CircularProgressIndicator(
                       value: v,
                       strokeWidth: 5,
-                      backgroundColor: AppColors.softIndigo.withOpacity(0.15),
+                      backgroundColor: AppColors.softIndigo.withValues(alpha: 0.15),
                       valueColor: const AlwaysStoppedAnimation(AppColors.softIndigo),
                       strokeCap: StrokeCap.round,
                     ),
@@ -448,7 +506,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           : "Let's crush those goals!",
                   style: TextStyle(
                       fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
                 ),
               ],
             ),
@@ -482,11 +540,11 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
     }
 
     Color _heatColor(double rate, bool dark) {
-      if (rate == 0)       return dark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06);
-      if (rate < 0.25)     return Colors.orange.withOpacity(0.25);
-      if (rate < 0.5)      return Colors.orange.withOpacity(0.45);
-      if (rate < 0.75)     return Colors.orange.withOpacity(0.65);
-      return Colors.orange.withOpacity(0.9);
+      if (rate == 0)       return dark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06);
+      if (rate < 0.25)     return Colors.orange.withValues(alpha: 0.25);
+      if (rate < 0.5)      return Colors.orange.withValues(alpha: 0.45);
+      if (rate < 0.75)     return Colors.orange.withValues(alpha: 0.65);
+      return Colors.orange.withValues(alpha: 0.9);
     }
 
     return Padding(
@@ -496,15 +554,15 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Colors.orange.withOpacity(isDark ? 0.25 : 0.12),
+              Colors.orange.withValues(alpha: isDark ? 0.25 : 0.12),
               isDark ? AppColors.charcoalGlass : Colors.white,
             ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
-          boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))],
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,7 +576,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                   children: [
                     Text('Current Streak',
                         style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w500,
                             fontSize: 13)),
                     const SizedBox(height: 4),
@@ -536,7 +594,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                                color: AppColors.dynamicMint.withOpacity(0.15),
+                                color: AppColors.dynamicMint.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8)),
                             child: const Text('🔥 active',
                                 style: TextStyle(
@@ -553,10 +611,10 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(colors: [
-                      Colors.orange.withOpacity(0.4),
-                      Colors.deepOrange.withOpacity(0.2),
+                      Colors.orange.withValues(alpha: 0.4),
+                      Colors.deepOrange.withValues(alpha: 0.2),
                     ]),
-                    boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 16, spreadRadius: 2)],
+                    boxShadow: [BoxShadow(color: Colors.orange.withValues(alpha: 0.3), blurRadius: 16, spreadRadius: 2)],
                   ),
                   child: const Icon(PhosphorIconsFill.fire, color: Colors.orange, size: 26),
                 ).animate(onPlay: (c) => c.repeat(reverse: true))
@@ -571,7 +629,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
             const SizedBox(height: 8),
 
             // Row labels (Mon–Sun) + grid columns side by side
@@ -588,7 +646,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 7,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3))),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3))),
                     ),
                   )).toList(),
                 ),
@@ -642,7 +700,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
             const SizedBox(height: 10),
             Row(
               children: [
-                Text('Less', style: TextStyle(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3))),
+                Text('Less', style: TextStyle(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3))),
                 const SizedBox(width: 4),
                 ...[0.0, 0.25, 0.5, 0.75, 1.0].map((r) => Container(
                   width: 9, height: 9,
@@ -652,7 +710,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 )),
-                Text('More', style: TextStyle(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3))),
+                Text('More', style: TextStyle(fontSize: 9, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3))),
               ],
             ),
           ],
@@ -690,7 +748,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.softIndigo.withOpacity(0.12),
+                    color: AppColors.softIndigo.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text('View Only',
@@ -710,20 +768,24 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Column(
                   children: [
-                    Icon(PhosphorIconsFill.target, size: 48, color: AppColors.softIndigo.withOpacity(0.3)),
+                    Icon(PhosphorIconsFill.target, size: 48, color: AppColors.softIndigo.withValues(alpha: 0.3)),
                     const SizedBox(height: 12),
                     Text('No habits yet',
-                        style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                        style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                     const SizedBox(height: 4),
                     Text('Tap + New Habit or browse Templates',
-                        style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35))),
+                        style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35))),
                   ],
                 ),
               ),
             )
           else
             // One category section per group
-            ...groups.entries.toList().asMap().entries.map((mapEntry) {
+            ...groups.entries.toList().asMap().entries.where((mapEntry) {
+              // Filter by selected category if set
+              if (_selectedCategory == null) return true;
+              return mapEntry.value.key == _selectedCategory;
+            }).map((mapEntry) {
               final sectionIndex = mapEntry.key;
               final category     = mapEntry.value.key;
               final catHabits    = mapEntry.value.value;
@@ -739,7 +801,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Category header
-                  GestureDetector(
+                  AppAnimatedPressable(
                     onTap: () {
                       HapticFeedback.selectionClick();
                       setState(() {
@@ -754,7 +816,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: catColor.withOpacity(isDark ? 0.12 : 0.07),
+                        color: catColor.withValues(alpha: isDark ? 0.12 : 0.07),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -771,7 +833,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                                color: catColor.withOpacity(0.18),
+                                color: catColor.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(20)),
                             child: Text('$catDone/${catHabits.length}',
                                 style: TextStyle(
@@ -785,7 +847,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                             duration: 250.ms,
                             child: Icon(PhosphorIconsRegular.caretDown,
                                 size: 14,
-                                color: catColor.withOpacity(0.7)),
+                                color: catColor.withValues(alpha: 0.7)),
                           ),
                         ],
                       ),
@@ -870,7 +932,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                         child: Container(
                           width: 40, height: 4,
                           decoration: BoxDecoration(
-                              color: Colors.grey.withOpacity(0.4),
+                              color: Colors.grey.withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(2)),
                         ),
                       ),
@@ -885,9 +947,9 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                         style: TextStyle(color: isDark ? Colors.white : AppColors.lightTextPrimary),
                         decoration: InputDecoration(
                           hintText: 'e.g. Morning Run, Cold Shower...',
-                          hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
+                          hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5)),
                           filled: true,
-                          fillColor: isDark ? Colors.white.withOpacity(0.05) : AppColors.cloudGray,
+                          fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.cloudGray,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -900,7 +962,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                              color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6))),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 36,
@@ -909,14 +971,14 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           children: _categoryMeta.entries.map((e) {
                             final isSel = e.key == selectedCategory;
                             final cColor = Color(e.value.$3);
-                            return GestureDetector(
+                            return AppAnimatedPressable(
                               onTap: () => setSheetState(() => selectedCategory = e.key),
                               child: AnimatedContainer(
                                 duration: 200.ms,
                                 margin: const EdgeInsets.only(right: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: isSel ? cColor.withOpacity(0.2) : Colors.grey.withOpacity(0.08),
+                                  color: isSel ? cColor.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(20),
                                   border: isSel ? Border.all(color: cColor, width: 1.5) : null,
                                 ),
@@ -944,7 +1006,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                              color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6))),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 50,
@@ -954,15 +1016,15 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           itemBuilder: (_, i) {
                             final (iconName, _) = _iconOptions[i];
                             final isSel = iconName == selectedIcon;
-                            return GestureDetector(
+                            return AppAnimatedPressable(
                               onTap: () => setSheetState(() => selectedIcon = iconName),
                               child: Container(
                                 width: 46, height: 46,
                                 margin: const EdgeInsets.only(right: 8),
                                 decoration: BoxDecoration(
                                   color: isSel
-                                      ? Color(selectedColor).withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.1),
+                                      ? Color(selectedColor).withValues(alpha: 0.2)
+                                      : Colors.grey.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: isSel ? Border.all(color: Color(selectedColor), width: 2) : null,
                                 ),
@@ -981,13 +1043,13 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                              color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6))),
                       const SizedBox(height: 8),
                       Row(
                         children: _colorOptions.map((opt) {
                           final (colorVal, _) = opt;
                           final isSel = colorVal == selectedColor;
-                          return GestureDetector(
+                          return AppAnimatedPressable(
                             onTap: () => setSheetState(() => selectedColor = colorVal),
                             child: Container(
                               width: 32, height: 32,
@@ -997,7 +1059,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                 shape: BoxShape.circle,
                                 border: isSel ? Border.all(color: Colors.white, width: 3) : null,
                                 boxShadow: isSel
-                                    ? [BoxShadow(color: Color(colorVal).withOpacity(0.5), blurRadius: 8)]
+                                    ? [BoxShadow(color: Color(colorVal).withValues(alpha: 0.5), blurRadius: 8)]
                                     : null,
                               ),
                               child: isSel ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
@@ -1012,7 +1074,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                              color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6))),
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -1030,12 +1092,12 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                           style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.6))),
+                              color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6))),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.05) : AppColors.cloudGray,
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.cloudGray,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
@@ -1044,7 +1106,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                 size: 18,
                                 color: reminderEnabled
                                     ? AppColors.softIndigo
-                                    : Theme.of(ctx).colorScheme.onSurface.withOpacity(0.4)),
+                                    : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.4)),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -1056,11 +1118,11 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                     fontWeight: FontWeight.w500,
                                     color: reminderEnabled
                                         ? (isDark ? Colors.white : AppColors.lightTextPrimary)
-                                        : Theme.of(ctx).colorScheme.onSurface.withOpacity(0.45)),
+                                        : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.45)),
                               ),
                             ),
                             if (reminderEnabled)
-                              GestureDetector(
+                              AppAnimatedPressable(
                                 onTap: () async {
                                   HapticFeedback.selectionClick();
                                   final picked = await showTimePicker(
@@ -1082,7 +1144,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.softIndigo.withOpacity(0.12),
+                                    color: AppColors.softIndigo.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text('Change',
@@ -1157,7 +1219,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                                   content: Text(msg),
                                   duration: const Duration(seconds: 3),
                                   behavior: SnackBarBehavior.floating,
-                                  backgroundColor: AppColors.softIndigo.withOpacity(0.9),
+                                  backgroundColor: AppColors.softIndigo.withValues(alpha: 0.9),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                                 ));
@@ -1212,7 +1274,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                   child: Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.4),
+                        color: Colors.grey.withValues(alpha: 0.4),
                         borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
@@ -1237,7 +1299,7 @@ class _HabitsScreenState extends ConsumerState<HabitsScreen> {
                         Text('One-tap add curated habit sets',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: Theme.of(ctx).colorScheme.onSurface.withOpacity(0.5))),
+                                color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.5))),
                       ],
                     ),
                   ],
@@ -1295,20 +1357,121 @@ class _FreqChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSel = value == selected;
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () => onTap(value),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSel ? AppColors.softIndigo : Colors.grey.withOpacity(0.12),
+          color: isSel ? AppColors.softIndigo : Colors.grey.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label,
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isSel ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+                color: isSel ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
       ),
+    );
+  }
+}
+
+// ── Streak Banner ─────────────────────────────────────────────────────────────
+/// Amber celebration banner shown when streak ≥ 2 days.
+class _StreakBanner extends StatelessWidget {
+  final int streak;
+  const _StreakBanner({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF2D1B00), const Color(0xFF1A1000)]
+                : [const Color(0xFFFFF3CD), const Color(0xFFFFE082)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColors.amberGlow.withValues(alpha: isDark ? 0.4 : 0.6),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.amberGlow.withValues(alpha: 0.18),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.amberGlow.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(PhosphorIconsFill.fire, color: AppColors.amberGlow, size: 20),
+            )
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 0.9, end: 1.1, duration: 900.ms, curve: Curves.easeInOut),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$streak-Day Streak',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? AppColors.amberGlow : const Color(0xFF7C5200),
+                    ),
+                  ),
+                  Text(
+                    streak < 7
+                        ? 'Keep it up! ${7 - streak} more days to a week!'
+                        : streak < 30
+                            ? 'You\'re on fire! ${30 - streak} days to a month!'
+                            : 'Legendary consistency!',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.amberGlow.withValues(alpha: 0.7)
+                          : const Color(0xFF7C5200).withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Mini bar chart: 7-day streak indicator dots
+            Row(
+              children: List.generate(7, (i) {
+                final filled = i < streak.clamp(0, 7);
+                return Container(
+                  width: 6,
+                  height: filled ? 18 : 10,
+                  margin: const EdgeInsets.only(left: 3),
+                  decoration: BoxDecoration(
+                    color: filled
+                        ? AppColors.amberGlow
+                        : AppColors.amberGlow.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      )
+          .animate()
+          .fadeIn(duration: 350.ms)
+          .slideY(begin: -0.08, end: 0, duration: 350.ms, curve: Curves.easeOutCubic),
     );
   }
 }
@@ -1335,9 +1498,9 @@ class _PackCardState extends State<_PackCard> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: widget.isDark ? AppColors.charcoalGlass.withOpacity(0.6) : AppColors.cloudGray,
+        color: widget.isDark ? AppColors.charcoalGlass.withValues(alpha: 0.6) : AppColors.cloudGray,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: p.color.withOpacity(0.25)),
+        border: Border.all(color: p.color.withValues(alpha: 0.25)),
       ),
       child: Column(
         children: [
@@ -1349,9 +1512,9 @@ class _PackCardState extends State<_PackCard> {
                 Container(
                   width: 44, height: 44,
                   decoration: BoxDecoration(
-                    color: p.color.withOpacity(0.15),
+                    color: p.color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: p.color.withOpacity(0.3)),
+                    border: Border.all(color: p.color.withValues(alpha: 0.3)),
                   ),
                   child: Icon(p.icon, color: p.color, size: 22),
                 ),
@@ -1366,7 +1529,7 @@ class _PackCardState extends State<_PackCard> {
                       Text(p.description,
                           style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                       const SizedBox(height: 4),
                       Text('${p.habits.length} habits',
                           style: TextStyle(
@@ -1377,13 +1540,13 @@ class _PackCardState extends State<_PackCard> {
                 Column(
                   children: [
                     // Add all
-                    GestureDetector(
+                    AppAnimatedPressable(
                       onTap: widget.onAddAll,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                              colors: [p.color, p.color.withOpacity(0.7)]),
+                              colors: [p.color, p.color.withValues(alpha: 0.7)]),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text('Add All',
@@ -1395,13 +1558,13 @@ class _PackCardState extends State<_PackCard> {
                     ),
                     const SizedBox(height: 6),
                     // Expand toggle
-                    GestureDetector(
+                    AppAnimatedPressable(
                       onTap: () => setState(() => _expanded = !_expanded),
                       child: Text(
                         _expanded ? 'Hide' : 'Preview',
                         style: TextStyle(
                             fontSize: 11,
-                            color: p.color.withOpacity(0.7),
+                            color: p.color.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -1423,22 +1586,22 @@ class _PackCardState extends State<_PackCard> {
                   leading: Container(
                     width: 32, height: 32,
                     decoration: BoxDecoration(
-                      color: Color(t.colorValue).withOpacity(0.15),
+                      color: Color(t.colorValue).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(_iconFor(t.iconName), color: Color(t.colorValue), size: 16),
                   ),
                   title: Text(t.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                   subtitle: Text(t.frequency == 'daily' ? 'Daily' : t.frequency == 'weekly5' ? '5×/week' : '3×/week',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
-                  trailing: GestureDetector(
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4))),
+                  trailing: AppAnimatedPressable(
                     onTap: () => widget.onAddSingle(t),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Color(t.colorValue).withOpacity(0.12),
+                        color: Color(t.colorValue).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Color(t.colorValue).withOpacity(0.3)),
+                        border: Border.all(color: Color(t.colorValue).withValues(alpha: 0.3)),
                       ),
                       child: Text('Add',
                           style: TextStyle(
@@ -1527,7 +1690,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-            color: AppColors.danger.withOpacity(0.15),
+            color: AppColors.danger.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20)),
         child: const Icon(PhosphorIconsFill.trash, color: AppColors.danger),
       ),
@@ -1541,19 +1704,19 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: widget.isCompleted
-              ? color.withOpacity(widget.isDark ? 0.12 : 0.06)
+              ? color.withValues(alpha: widget.isDark ? 0.12 : 0.06)
               : widget.isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: widget.isCompleted
-                ? color.withOpacity(0.3)
-                : Colors.white.withOpacity(widget.isDark ? 0.05 : 0),
+                ? color.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: widget.isDark ? 0.05 : 0),
           ),
           boxShadow: [
             BoxShadow(
               color: widget.isCompleted
-                  ? color.withOpacity(0.1)
-                  : Colors.black.withOpacity(widget.isDark ? 0 : 0.04),
+                  ? color.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: widget.isDark ? 0 : 0.04),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -1573,7 +1736,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                     CircularProgressIndicator(
                       value: v,
                       strokeWidth: 4,
-                      backgroundColor: color.withOpacity(0.15),
+                      backgroundColor: color.withValues(alpha: 0.15),
                       valueColor: AlwaysStoppedAnimation(color),
                       strokeCap: StrokeCap.round,
                     ),
@@ -1594,7 +1757,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                       decoration: widget.isCompleted ? TextDecoration.lineThrough : null,
-                      decorationColor: color.withOpacity(0.6),
+                      decorationColor: color.withValues(alpha: 0.6),
                     ),
                     child: Text(h.title),
                   ),
@@ -1607,7 +1770,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                       fontSize: 12,
                       color: widget.isCompleted
                           ? color
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                       fontWeight: widget.isCompleted ? FontWeight.w500 : FontWeight.normal,
                     ),
                   ),
@@ -1616,13 +1779,13 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                     Text('🔥 $habitStreak day streak',
                         style: TextStyle(
                             fontSize: 10,
-                            color: Colors.orange.withOpacity(0.8),
+                            color: Colors.orange.withValues(alpha: 0.8),
                             fontWeight: FontWeight.w500)),
                   ],
                 ],
               ),
             ),
-            GestureDetector(
+            AppAnimatedPressable(
               onTap: widget.isReadOnly ? null : widget.onToggle,
               child: AnimatedContainer(
                 duration: 300.ms,
@@ -1630,16 +1793,16 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: widget.isCompleted
-                      ? color.withOpacity(widget.isReadOnly ? 0.5 : 1.0)
+                      ? color.withValues(alpha: widget.isReadOnly ? 0.5 : 1.0)
                       : Colors.transparent,
                   border: Border.all(
                     color: widget.isCompleted
-                        ? color.withOpacity(widget.isReadOnly ? 0.4 : 1.0)
-                        : Colors.grey.withOpacity(0.4),
+                        ? color.withValues(alpha: widget.isReadOnly ? 0.4 : 1.0)
+                        : Colors.grey.withValues(alpha: 0.4),
                     width: 2,
                   ),
                   boxShadow: widget.isCompleted && !widget.isReadOnly
-                      ? [BoxShadow(color: color.withOpacity(0.4), blurRadius: 10)]
+                      ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 10)]
                       : null,
                 ),
                 child: AnimatedSwitcher(
@@ -1648,7 +1811,7 @@ class _HabitCardState extends State<_HabitCard> with SingleTickerProviderStateMi
                       ScaleTransition(scale: anim, child: child),
                   child: widget.isCompleted
                       ? Icon(PhosphorIconsBold.check,
-                          key: const ValueKey('check'), color: Colors.white.withOpacity(widget.isReadOnly ? 0.7 : 1.0), size: 20)
+                          key: const ValueKey('check'), color: Colors.white.withValues(alpha: widget.isReadOnly ? 0.7 : 1.0), size: 20)
                       : const SizedBox(key: ValueKey('empty')),
                 ),
               ),
@@ -1702,11 +1865,11 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
           decoration: BoxDecoration(
             color: isDark ? AppColors.charcoalGlass : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.softIndigo.withOpacity(0.1)),
+            border: Border.all(color: AppColors.softIndigo.withValues(alpha: 0.1)),
           ),
         )
             .animate(onPlay: (c) => c.repeat(reverse: true))
-            .shimmer(duration: 1200.ms, color: AppColors.softIndigo.withOpacity(0.05)),
+            .shimmer(duration: 1200.ms, color: AppColors.softIndigo.withValues(alpha: 0.05)),
         error: (_, __) => const SizedBox.shrink(),
         data: (text) => Container(
           padding: const EdgeInsets.all(16),
@@ -1719,10 +1882,10 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.softIndigo.withOpacity(isDark ? 0.2 : 0.12)),
+            border: Border.all(color: AppColors.softIndigo.withValues(alpha: isDark ? 0.2 : 0.12)),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.softIndigo.withOpacity(0.06),
+                  color: AppColors.softIndigo.withValues(alpha: 0.06),
                   blurRadius: 16,
                   offset: const Offset(0, 6))
             ],
@@ -1738,7 +1901,7 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                        color: AppColors.softIndigo.withOpacity(0.35), blurRadius: 8)
+                        color: AppColors.softIndigo.withValues(alpha: 0.35), blurRadius: 8)
                   ],
                 ),
                 child: const Icon(Icons.auto_awesome, color: Colors.white, size: 15),
@@ -1755,9 +1918,9 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
                                 fontSize: 9,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.5,
-                                color: AppColors.softIndigo.withOpacity(0.7))),
+                                color: AppColors.softIndigo.withValues(alpha: 0.7))),
                         const Spacer(),
-                        GestureDetector(
+                        AppAnimatedPressable(
                           onTap: () {
                             HapticFeedback.lightImpact();
                             _spinCtrl.repeat();
@@ -1766,7 +1929,7 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
                           child: RotationTransition(
                             turns: _spinCtrl,
                             child: Icon(PhosphorIconsRegular.arrowsClockwise,
-                                size: 15, color: AppColors.softIndigo.withOpacity(0.6)),
+                                size: 15, color: AppColors.softIndigo.withValues(alpha: 0.6)),
                           ),
                         ),
                       ],
@@ -1782,7 +1945,7 @@ class _HabitAiInsightCardState extends ConsumerState<_HabitAiInsightCard>
                             height: 1.5,
                             fontWeight: FontWeight.w500,
                             color: isDark
-                                ? Colors.white.withOpacity(0.8)
+                                ? Colors.white.withValues(alpha: 0.8)
                                 : AppColors.lightTextPrimary),
                       ),
                     ),

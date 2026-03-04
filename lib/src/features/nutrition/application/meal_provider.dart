@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import '../../../services/local_db_service.dart';
 import '../../../database/models/meal_doc.dart';
+import '../../dashboard/application/daily_activity_provider.dart';
 
 /// Meals for a specific date
 final mealsForDateProvider =
@@ -18,7 +19,7 @@ class MealsNotifier extends FamilyNotifier<List<MealDoc>, DateTime> {
 
   @override
   List<MealDoc> build(DateTime arg) {
-    _load();
+    Future.microtask(_load);
     return [];
   }
 
@@ -58,11 +59,40 @@ class MealsNotifier extends FamilyNotifier<List<MealDoc>, DateTime> {
       ..ingredientsDetected = ingredients;
     await _db.writeTxn(() => _db.mealDocs.put(doc));
     _load();
+
+    // Keep today's dashboard totals in sync
+    final today = DateTime.now();
+    final isToday = _date.year == today.year &&
+        _date.month == today.month &&
+        _date.day == today.day;
+    if (isToday) {
+      ref.read(dailyActivityProvider.notifier).addMeal(
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+          );
+    }
   }
 
   Future<void> remove(int id) async {
+    final meal = state.firstWhere((m) => m.id == id, orElse: () => MealDoc());
     await _db.writeTxn(() => _db.mealDocs.delete(id));
     state = state.where((m) => m.id != id).toList();
+
+    // Reverse the dashboard totals when a today meal is deleted
+    final today = DateTime.now();
+    final isToday = _date.year == today.year &&
+        _date.month == today.month &&
+        _date.day == today.day;
+    if (isToday && meal.id != 0) {
+      ref.read(dailyActivityProvider.notifier).addMeal(
+            calories: -meal.calories,
+            protein: -meal.proteinGrams,
+            carbs: -meal.carbsGrams,
+            fat: -meal.fatGrams,
+          );
+    }
   }
 
   // Totals

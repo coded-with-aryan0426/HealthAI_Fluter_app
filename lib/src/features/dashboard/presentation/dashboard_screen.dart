@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +11,11 @@ import 'widgets/hero_activity_rings.dart';
 import '../application/daily_activity_provider.dart';
 import '../application/daily_insight_provider.dart';
 import '../application/weekly_stats_provider.dart';
+import '../../../services/health_service.dart';
+import '../../../database/models/daily_log_doc.dart';
+import '../../../database/models/user_doc.dart';
 import 'package:health_app/src/theme/app_colors.dart';
+import 'package:health_app/src/theme/app_ui.dart';
 import 'package:health_app/src/theme/theme_provider.dart';
 import '../../profile/application/user_provider.dart';
 import '../../workout/application/workout_controller.dart';
@@ -53,7 +58,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with WidgetsBindingObserver {
   String _greeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good Morning';
@@ -64,12 +70,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Health sync (best-effort, never blocks UI)
-      ref.read(dailyActivityProvider.notifier).syncFromHealth();
+      // Request health permissions then sync data
+      await _syncHealth();
       // Achievement check
       await _checkAndShowAchievements();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Re-sync health data whenever the app is foregrounded
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncHealth();
+    }
+  }
+
+  Future<void> _syncHealth() async {
+    // syncFromHealth calls fetchToday() internally which handles
+    // permission checks and 5-minute caching — do NOT call
+    // requestPermissions() here separately or it triggers an endless
+    // permission-request + SecurityException loop on every resume.
+    await ref.read(dailyActivityProvider.notifier).syncFromHealth();
   }
 
   /// Evaluates today's stats against achievement conditions.
@@ -127,35 +156,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final today = ref.watch(dailyActivityProvider);
-    final user = ref.watch(userProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final displayName = user.displayName ?? 'You';
+      final today = ref.watch(dailyActivityProvider);
+      final user = ref.watch(userProvider);
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final displayName = user.displayName ?? 'You';
 
-    // Keep 8 PM evening nudge notification synced with today's live data
-    ref.watch(eveningNudgeSchedulerProvider);
-
-    // #44 – is this user's very first session (all stats are zero)?
-    final isAllZero = today.waterMl == 0 &&
-        today.stepCount == 0 &&
-        today.caloriesConsumed == 0 &&
-        today.caloriesBurned == 0 &&
-        today.sleepMinutes == 0 &&
-        today.proteinGrams == 0;
+      // Keep 8 PM evening nudge notification synced with today's live data
+      ref.watch(eveningNudgeSchedulerProvider);
 
     return PopScope(
       canPop: false,
       child: Scaffold(
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: scrollPhysics,
         slivers: [
           // Glassmorphic sticky header
           SliverAppBar(
             pinned: true,
             expandedHeight: 0,
             backgroundColor: isDark
-                ? AppColors.deepObsidian.withOpacity(0.85)
-                : Colors.white.withOpacity(0.85),
+                ? AppColors.deepObsidian.withValues(alpha: 0.85)
+                : Colors.white.withValues(alpha: 0.85),
             elevation: 0,
             scrolledUnderElevation: 0,
             flexibleSpace: ClipRect(
@@ -207,8 +228,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           height: 38,
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.black.withOpacity(0.05),
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.05),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -221,42 +242,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       );
                     }),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          context.push('/profile');
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [AppColors.dynamicMint, AppColors.softIndigo],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.softIndigo.withOpacity(0.4),
-                                blurRadius: 10,
-                              ),
-                            ],
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            context.push('/profile');
+                          },
+                          child: _DashboardAvatar(
+                            photoUrl: user.photoUrl,
+                            displayName: displayName,
                           ),
-                          child: ClipOval(
-                              child: user.photoUrl != null
-                                  ? Image.network(user.photoUrl!, fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(PhosphorIconsFill.user, color: Colors.white, size: 20))
-                                  : Center(
-                                      child: Text(
-                                        displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                                      ),
-                                    ),
-                            ),
                         ),
-                      ),
                   ],
                 ),
               ],
@@ -264,79 +260,63 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
 
           SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 12),
+             delegate: SliverChildListDelegate([
+               const SizedBox(height: 12),
 
-              // ── #45 Welcome Banner (first-time only) ──
-              const _WelcomeBanner(),
+               // ── Welcome Banner (first-time only) ──
+               const _WelcomeBanner(),
 
-              // ── Active Workout Resume Banner ──
-              _ActiveWorkoutBanner(),
+               // ── Active Workout Resume Banner ──
+               _ActiveWorkoutBanner(),
 
-              // ── Upcoming Habits Banner ──
-              const _UpcomingHabitsBanner(),
+               // ── Upcoming Habits Banner ──
+               const _UpcomingHabitsBanner(),
 
-              // ── #44 First-launch empty state hint ──
-              if (isAllZero) const _FirstLaunchHint(),
+               // ── Hero Activity Rings ──
+               const HeroActivityRings(),
+               const SizedBox(height: 8),
 
-              // ── Hero Activity Rings ──
-              const HeroActivityRings(),
-              const SizedBox(height: 8),
-
-              // ── Ring legend labels ──
-              _RingLegend(today: today)
-                  .animate()
-                  .fadeIn(delay: 600.ms, duration: 400.ms),
-
-              const SizedBox(height: 28),
-
-              // ── Water Tracker Card ──
-              _WaterTrackerCard(today: today, isEmpty: isAllZero)
-                  .animate()
-                  .fadeIn(delay: 200.ms, duration: 400.ms)
-                  .slideY(begin: 0.15, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-
-                const SizedBox(height: 16),
-
-                // ── AI Daily Insight Card ──
-                _AiInsightCard(isEmpty: isAllZero),
-
-                const SizedBox(height: 16),
-
-                // ── Weekly Overview Banner ──
-                const _WeeklyBanner(),
-
-                const SizedBox(height: 16),
-
-                // ── Section title ──
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  "Today's Stats",
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                ),
-              ).animate().fadeIn(delay: 350.ms),
-
-              const SizedBox(height: 16),
-
-               // ── Bento Grid ──
-               _BentoGrid(today: today, user: user, isEmpty: isAllZero),
+               // ── Ring legend labels ──
+               _RingLegend(today: today)
+                   .animate()
+                   .fadeIn(delay: 600.ms, duration: 400.ms),
 
                const SizedBox(height: 28),
 
-               // ── Health Tools Section title ──
-               Padding(
-                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                 child: Text(
-                   'Health Tools',
-                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                         fontWeight: FontWeight.bold,
-                         fontSize: 18,
-                       ),
-                 ),
+               // ── Water Tracker Card ──
+               _WaterTrackerCard(today: today)
+                   .animate()
+                   .fadeIn(delay: 200.ms, duration: 400.ms)
+                   .slideY(begin: 0.15, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+
+               const SizedBox(height: 16),
+
+               // ── AI Daily Insight Card ──
+               const _AiInsightCard(),
+
+               const SizedBox(height: 16),
+
+               // ── Weekly Overview Banner ──
+               const _WeeklyBanner(),
+
+               const SizedBox(height: 16),
+
+               // ── Section title ──
+               AppSectionHeader(
+                 title: "Today's Stats",
+               ).animate().fadeIn(delay: 350.ms),
+
+               const SizedBox(height: 16),
+
+                 // ── Bento Grid ──
+                 _BentoGrid(today: today, user: user),
+
+                 const SizedBox(height: 16),
+
+                 // ── Health Tools Section title ──
+               AppSectionHeader(
+                 title: 'Health Tools',
+                 accentColor: AppColors.softIndigo,
                ).animate().fadeIn(delay: 450.ms),
 
                const SizedBox(height: 16),
@@ -344,7 +324,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                // ── Health Tools Cards ──
                const _HealthToolsSection(),
 
-                 const SizedBox(height: 100),
+               const SizedBox(height: 100),
              ]),
            ),
          ],
@@ -353,53 +333,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _ActionButton(
-            label: 'Scan',
-            icon: PhosphorIconsFill.camera,
-            gradient: [const Color(0xFF6B7AFF), const Color(0xFF9B59B6)],
-            onTap: () => context.push('/scanner'),
-          ),
-            _ActionButton(
-              label: 'Workout',
-              icon: PhosphorIconsFill.barbell,
-              gradient: [AppColors.warning, const Color(0xFFFF6B6B)],
-              onTap: () => context.push('/workout/library'),
-            ),
-          _ActionButton(
-            label: 'AI Coach',
-            icon: PhosphorIconsFill.sparkle,
-            gradient: [AppColors.dynamicMint, const Color(0xFF00B4D8)],
-            onTap: () => context.push('/chat'),
-          ),
-          _ActionButton(
-            label: 'Profile',
-            icon: PhosphorIconsFill.user,
-            gradient: [const Color(0xFFFF9F43), const Color(0xFFFFD700)],
-            onTap: () => context.push('/profile'),
-          ),
-        ]
-            .animate(interval: 60.ms)
-            .scale(
-              begin: const Offset(0.85, 0.85),
-              end: const Offset(1, 1),
-              duration: 400.ms,
-              curve: Curves.easeOutBack,
-            )
-              .fadeIn(),
-      ),
-    );
-  }
 }
 
 // ── Ring Legend ──────────────────────────────────────────────────────────────
 class _RingLegend extends StatelessWidget {
-  final dynamic today;
+  final DailyLogDoc today;
   const _RingLegend({required this.today});
 
   @override
@@ -449,14 +387,14 @@ class _LegendDot extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)],
+                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)],
               ),
             ),
             const SizedBox(width: 6),
             Text(label,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   fontWeight: FontWeight.w500,
                 )),
           ],
@@ -474,21 +412,59 @@ class _LegendDot extends StatelessWidget {
 }
 
 // ── Water Tracker Card ───────────────────────────────────────────────────────
-class _WaterTrackerCard extends ConsumerWidget {
-  final dynamic today;
-  final bool isEmpty;
-  const _WaterTrackerCard({required this.today, this.isEmpty = false});
+class _WaterTrackerCard extends ConsumerStatefulWidget {
+  final DailyLogDoc today;
+  const _WaterTrackerCard({required this.today});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WaterTrackerCard> createState() => _WaterTrackerCardState();
+}
+
+class _WaterTrackerCardState extends ConsumerState<_WaterTrackerCard>
+    with SingleTickerProviderStateMixin {
+  final _burstKey = GlobalKey<AppParticleBurstState>();
+  late AnimationController _rippleCtrl;
+  bool _goalWasHit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rippleCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _goalWasHit = widget.today.waterMl >= widget.today.waterGoalMl;
+  }
+
+  @override
+  void didUpdateWidget(_WaterTrackerCard old) {
+    super.didUpdateWidget(old);
+    final hitNow = widget.today.waterMl >= widget.today.waterGoalMl;
+    if (!_goalWasHit && hitNow) {
+      _goalWasHit = true;
+      _burstKey.currentState?.burst();
+      _rippleCtrl.forward(from: 0);
+      HapticFeedback.heavyImpact();
+    } else if (!hitNow) {
+      _goalWasHit = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _rippleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = widget.today;
     final percent = (today.waterMl / today.waterGoalMl).clamp(0.0, 1.0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
-        onLongPress: () => _showWaterAmountSheet(context, ref),
-        child: Container(
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: AppAnimatedPressable(
+          onLongPress: () => _showWaterAmountSheet(context, ref),
+          child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -500,11 +476,11 @@ class _WaterTrackerCard extends ConsumerWidget {
           ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: const Color(0xFF41C9E2).withOpacity(isDark ? 0.25 : 0.4),
+            color: const Color(0xFF41C9E2).withValues(alpha: isDark ? 0.25 : 0.4),
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF41C9E2).withOpacity(0.12),
+              color: const Color(0xFF41C9E2).withValues(alpha: 0.12),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -521,7 +497,7 @@ class _WaterTrackerCard extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF41C9E2).withOpacity(0.2),
+                        color: const Color(0xFF41C9E2).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(PhosphorIconsFill.drop,
@@ -536,18 +512,15 @@ class _WaterTrackerCard extends ConsumerWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
-                              color: const Color(0xFF41C9E2).withOpacity(0.8),
+                              color: const Color(0xFF41C9E2).withValues(alpha: 0.8),
                             )),
-                        Text(
-                          isEmpty ? 'Start your day hydrated!' : 'Daily Hydration',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isEmpty ? FontWeight.w600 : FontWeight.normal,
-                            color: isEmpty
-                                ? const Color(0xFF41C9E2)
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          Text(
+                            'Daily Hydration',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -570,7 +543,7 @@ class _WaterTrackerCard extends ConsumerWidget {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
-                              .withOpacity(0.5),
+                              .withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -580,42 +553,47 @@ class _WaterTrackerCard extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // Animated progress bar
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: percent),
-              duration: 1200.ms,
-              curve: Curves.easeOutCubic,
-              builder: (context, v, _) {
-                return Stack(
-                  children: [
-                    Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF41C9E2).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    FractionallySizedBox(
-                      widthFactor: v,
+            // 16px animated progress bar with glow
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                AppProgressBar(
+                  progress: percent,
+                  gradientColors: const [Color(0xFF41C9E2), Color(0xFF00B4D8)],
+                  height: 16,
+                  borderRadius: 8,
+                  animationDuration: 1200.ms,
+                ),
+                // Goal-hit ripple overlay
+                AnimatedBuilder(
+                  animation: _rippleCtrl,
+                  builder: (_, __) {
+                    if (_rippleCtrl.value == 0) return const SizedBox.shrink();
+                    return Opacity(
+                      opacity: (1.0 - _rippleCtrl.value).clamp(0.0, 1.0),
                       child: Container(
-                        height: 10,
+                        height: 16,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF41C9E2), Color(0xFF00B4D8)],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF41C9E2),
+                            width: 2 + _rippleCtrl.value * 6,
                           ),
-                          borderRadius: BorderRadius.circular(5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF41C9E2).withOpacity(0.4),
-                              blurRadius: 8,
-                            ),
-                          ],
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+                // Particle burst anchored at center of bar
+                Positioned(
+                  child: AppParticleBurst(
+                    key: _burstKey,
+                    primaryColor: const Color(0xFF41C9E2),
+                    particleCount: 20,
+                    radius: 50,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),
@@ -646,7 +624,7 @@ class _WaterTrackerCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF41C9E2).withOpacity(0.35),
+                            color: const Color(0xFF41C9E2).withValues(alpha: 0.35),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -691,7 +669,7 @@ class _WaterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppAnimatedPressable(
       onTap: () {
         HapticFeedback.selectionClick();
         onTap();
@@ -700,10 +678,10 @@ class _WaterChip extends StatelessWidget {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF41C9E2).withOpacity(0.12),
+          color: const Color(0xFF41C9E2).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
           border:
-              Border.all(color: const Color(0xFF41C9E2).withOpacity(0.25)),
+              Border.all(color: const Color(0xFF41C9E2).withValues(alpha: 0.25)),
         ),
         alignment: Alignment.center,
         child: Text(label,
@@ -779,7 +757,7 @@ class _ActionButtonState extends State<_ActionButton>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.gradient.first.withOpacity(0.35),
+                    color: widget.gradient.first.withValues(alpha: 0.35),
                     blurRadius: 14,
                     offset: const Offset(0, 6),
                   ),
@@ -793,7 +771,7 @@ class _ActionButtonState extends State<_ActionButton>
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -805,89 +783,139 @@ class _ActionButtonState extends State<_ActionButton>
 
 // ── Bento Grid ───────────────────────────────────────────────────────────────
 class _BentoGrid extends ConsumerWidget {
-  final dynamic today;
-  final dynamic user;
-  final bool isEmpty;
-  const _BentoGrid({required this.today, required this.user, this.isEmpty = false});
+  final DailyLogDoc today;
+  final UserDoc user;
+  const _BentoGrid({required this.today, required this.user});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final calorieGoal = (user.calorieGoal as int?) ?? 2000;
-    final proteinGoal = (user.proteinGoalG as int?) ?? 150;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GridView.count(
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.0,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _BentoCard(
-            title: 'SLEEP',
-            mainValue: today.sleepMinutes == 0
-                ? '—'
-                : (today.sleepMinutes / 60).toStringAsFixed(1),
-            unit: today.sleepMinutes == 0 ? '' : 'hrs',
-            subtitle: today.sleepMinutes == 0
-                ? (isEmpty ? 'Tap to log sleep' : 'Tap to log')
-                : 'Last night',
-            iconData: PhosphorIconsFill.moon,
-            gradientColors: [const Color(0xFF6B7AFF), const Color(0xFF9B59B6)],
-            progress: (today.sleepMinutes / 480).clamp(0.0, 1.0),
-            isEmpty: isEmpty && today.sleepMinutes == 0,
-            onTap: () => _showSleepLogSheet(context, ref),
-          ),
-           _BentoCard(
-              title: 'STEPS',
-              mainValue: today.stepCount == 0 ? '—' : '${today.stepCount}',
-              unit: '',
-              subtitle: today.stepCount == 0
-                  ? (isEmpty ? 'Walk to get started' : '/ 10,000 goal')
-                  : '/ 10,000 goal',
-              iconData: PhosphorIconsFill.sneaker,
-              gradientColors: [AppColors.dynamicMint, const Color(0xFF00B4D8)],
-              progress: (today.stepCount / 10000).clamp(0.0, 1.0),
-              isEmpty: isEmpty && today.stepCount == 0,
-              onTap: () => _showStepsDetailSheet(context, ref, today.stepCount),
+      final calorieGoal = user.calorieGoal;
+      final proteinGoal = user.proteinGoalG;
+
+      final cards = [
+        _BentoCard(
+          title: 'SLEEP',
+          mainValue: today.sleepMinutes == 0
+              ? '—'
+              : (today.sleepMinutes / 60).toStringAsFixed(1),
+          unit: today.sleepMinutes == 0 ? '' : 'hrs',
+          subtitle: today.sleepMinutes == 0 ? 'Tap to log sleep' : 'Last night',
+          iconData: PhosphorIconsFill.moon,
+          gradientColors: [const Color(0xFF6B7AFF), const Color(0xFF9B59B6)],
+          progress: (today.sleepMinutes / 480).clamp(0.0, 1.0),
+          onTap: () => _showSleepLogSheet(context, ref),
+        ),
+        _BentoCard(
+          title: 'STEPS',
+          mainValue: today.stepCount == 0 ? '—' : '${today.stepCount}',
+          unit: '',
+          subtitle: '/ 10,000 goal',
+          iconData: PhosphorIconsFill.sneaker,
+          gradientColors: [AppColors.dynamicMint, const Color(0xFF00B4D8)],
+          progress: (today.stepCount / 10000).clamp(0.0, 1.0),
+          onTap: () => _showStepsDetailSheet(context, ref, today.stepCount),
+        ),
+        _BentoCard(
+          title: 'PROTEIN',
+          mainValue: today.proteinGrams == 0 ? '—' : '${today.proteinGrams}',
+          unit: today.proteinGrams == 0 ? '' : 'g',
+          subtitle: 'Daily target: ${proteinGoal}g',
+          iconData: PhosphorIconsFill.egg,
+          gradientColors: [AppColors.danger, const Color(0xFFFF6B35)],
+          progress: (today.proteinGrams / proteinGoal).clamp(0.0, 1.0),
+          onTap: () => context.push('/nutrition'),
+        ),
+        _BentoCard(
+          title: 'CALORIES IN',
+          mainValue: today.caloriesConsumed == 0 ? '—' : '${today.caloriesConsumed}',
+          unit: today.caloriesConsumed == 0 ? '' : 'kcal',
+          subtitle: 'Goal: $calorieGoal kcal',
+          iconData: PhosphorIconsFill.forkKnife,
+          gradientColors: [AppColors.warning, const Color(0xFFFFD700)],
+          progress: (today.caloriesConsumed / calorieGoal).clamp(0.0, 1.0),
+          onTap: () => context.push('/nutrition'),
+        ),
+      ];
+
+      // Heart rate + distance from health snapshot
+      final healthAsync = ref.watch(healthSnapshotProvider);
+      final heartBpm = healthAsync.valueOrNull?.heartRateBpm ?? 0.0;
+      final distKm = ((healthAsync.valueOrNull?.distanceMeters ?? 0) / 1000);
+
+      final extraCards = [
+        _BentoCard(
+          title: 'HEART RATE',
+          mainValue: heartBpm == 0 ? '—' : heartBpm.toStringAsFixed(0),
+          unit: heartBpm == 0 ? '' : 'bpm',
+          subtitle: 'Avg today',
+          iconData: PhosphorIconsFill.heartbeat,
+          gradientColors: const [Color(0xFFFF3D3D), Color(0xFFFF6B35)],
+          progress: heartBpm == 0 ? 0 : (heartBpm / 200).clamp(0.0, 1.0),
+          onTap: null,
+        ),
+        _BentoCard(
+          title: 'DISTANCE',
+          mainValue: distKm == 0 ? '—' : distKm.toStringAsFixed(2),
+          unit: distKm == 0 ? '' : 'km',
+          subtitle: 'Walking + running',
+          iconData: PhosphorIconsFill.mapPin,
+          gradientColors: const [Color(0xFF00C9A7), Color(0xFF00B4D8)],
+          progress: (distKm / 10).clamp(0.0, 1.0),
+          onTap: null,
+        ),
+      ];
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: cards[0]
+                      .animate().fadeIn(delay: 0.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                  const SizedBox(width: 16),
+                  Expanded(child: cards[1]
+                      .animate().fadeIn(delay: 80.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                ],
+              ),
             ),
-          _BentoCard(
-            title: 'PROTEIN',
-            mainValue: today.proteinGrams == 0 ? '—' : '${today.proteinGrams}',
-            unit: today.proteinGrams == 0 ? '' : 'g',
-            subtitle: today.proteinGrams == 0
-                ? (isEmpty ? 'Log your first meal' : 'Daily target: ${proteinGoal}g')
-                : 'Daily target: ${proteinGoal}g',
-            iconData: PhosphorIconsFill.egg,
-            gradientColors: [AppColors.danger, const Color(0xFFFF6B35)],
-            progress: (today.proteinGrams / proteinGoal).clamp(0.0, 1.0),
-            isEmpty: isEmpty && today.proteinGrams == 0,
-            onTap: () => context.push('/nutrition'),
-          ),
-          _BentoCard(
-            title: 'CALORIES IN',
-            mainValue: today.caloriesConsumed == 0 ? '—' : '${today.caloriesConsumed}',
-            unit: today.caloriesConsumed == 0 ? '' : 'kcal',
-            subtitle: today.caloriesConsumed == 0
-                ? (isEmpty ? 'Tap to log food' : 'Goal: $calorieGoal kcal')
-                : 'Goal: $calorieGoal kcal',
-            iconData: PhosphorIconsFill.forkKnife,
-            gradientColors: [AppColors.warning, const Color(0xFFFFD700)],
-            progress: (today.caloriesConsumed / calorieGoal).clamp(0.0, 1.0),
-            isEmpty: isEmpty && today.caloriesConsumed == 0,
-            onTap: () => context.push('/nutrition'),
-          ),
-        ]
-            .animate(interval: 80.ms)
-            .fadeIn(duration: 500.ms)
-            .slideY(
-                begin: 0.2,
-                end: 0,
-                duration: 500.ms,
-                curve: Curves.easeOutCubic),
-      ),
-    );
+            const SizedBox(height: 16),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: cards[2]
+                      .animate().fadeIn(delay: 160.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                  const SizedBox(width: 16),
+                  Expanded(child: cards[3]
+                      .animate().fadeIn(delay: 240.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: extraCards[0]
+                      .animate().fadeIn(delay: 320.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                  const SizedBox(width: 16),
+                  Expanded(child: extraCards[1]
+                      .animate().fadeIn(delay: 400.ms, duration: 500.ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
   }
 }
 
@@ -896,12 +924,10 @@ class _BentoCard extends StatelessWidget {
   final String mainValue;
   final String unit;
   final String subtitle;
-  final Color Function(double)? colorOverride;
   final IconData iconData;
   final List<Color> gradientColors;
   final double progress;
   final VoidCallback? onTap;
-  final bool isEmpty;
 
   const _BentoCard({
     required this.title,
@@ -911,9 +937,7 @@ class _BentoCard extends StatelessWidget {
     required this.iconData,
     required this.gradientColors,
     required this.progress,
-    this.colorOverride,
     this.onTap,
-    this.isEmpty = false,
   });
 
   @override
@@ -921,24 +945,21 @@ class _BentoCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = gradientColors.first;
 
-    Widget card = GestureDetector(
-      onTap: onTap != null ? () {
-        HapticFeedback.lightImpact();
-        onTap!();
-      } : null,
-      child: Container(
+      Widget card = AppAnimatedPressable(
+        onTap: onTap,
+        child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: isDark ? AppColors.charcoalGlass : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isDark
-                ? Colors.white.withOpacity(0.06)
-                : Colors.black.withOpacity(0.04),
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04),
           ),
           boxShadow: isDark
-              ? [BoxShadow(color: accent.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))]
-              : [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))],
+              ? [BoxShadow(color: accent.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 8))]
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -956,7 +977,7 @@ class _BentoCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
-                      BoxShadow(color: accent.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 3))
+                      BoxShadow(color: accent.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))
                     ],
                   ),
                   child: Icon(iconData, color: Colors.white, size: 16),
@@ -968,7 +989,7 @@ class _BentoCard extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.8,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                   ),
                 ),
               ],
@@ -1005,38 +1026,15 @@ class _BentoCard extends StatelessWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 10,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                 ),
-                const SizedBox(height: 10),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: progress),
-                  duration: 1400.ms,
-                  curve: Curves.easeOutCubic,
-                  builder: (ctx, v, _) {
-                    return Stack(
-                      children: [
-                        Container(
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: accent.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: v,
-                          child: Container(
-                            height: 4,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: gradientColors),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                    const SizedBox(height: 10),
+                    AppProgressBar(
+                      progress: progress,
+                      gradientColors: gradientColors,
+                      animationDuration: 1400.ms,
+                    ),
               ],
             ),
           ],
@@ -1044,11 +1042,6 @@ class _BentoCard extends StatelessWidget {
       ),
     );
 
-    if (isEmpty) {
-      return card
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .shimmer(duration: 1600.ms, color: accent.withOpacity(0.08));
-    }
     return card;
   }
 }
@@ -1105,11 +1098,8 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          context.go('/habits');
-        },
+      child: AppAnimatedPressable(
+        onTap: () => context.go('/habits'),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
@@ -1118,11 +1108,11 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
                 : const Color(0xFFF5F5FF),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.softIndigo.withOpacity(isDark ? 0.2 : 0.15),
+              color: AppColors.softIndigo.withValues(alpha: isDark ? 0.2 : 0.15),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.softIndigo.withOpacity(0.07),
+                color: AppColors.softIndigo.withValues(alpha: 0.07),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -1134,7 +1124,7 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.softIndigo.withOpacity(0.15),
+                  color: AppColors.softIndigo.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -1157,7 +1147,7 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.4,
-                            color: AppColors.softIndigo.withOpacity(0.8),
+                            color: AppColors.softIndigo.withValues(alpha: 0.8),
                           ),
                         ),
                         Text(
@@ -1168,17 +1158,27 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.4),
+                                .withValues(alpha: 0.4),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    ...pending.map((h) => _HabitRow(
-                          habit: h,
-                          iconData: _iconFor(h.iconName),
-                          onTap: () => ref.read(habitsProvider.notifier).toggle(h.id, today),
-                        )),
+                    // Staggered entrance: each row fades + slides in 80 ms apart
+                    ...pending.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final h = entry.value;
+                      return _HabitRow(
+                        habit: h,
+                        iconData: _iconFor(h.iconName),
+                        onTap: () => ref.read(habitsProvider.notifier).toggle(h.id, today),
+                      )
+                          .animate()
+                          .fadeIn(delay: Duration(milliseconds: i * 80), duration: 280.ms)
+                          .slideX(begin: 0.08, end: 0,
+                              delay: Duration(milliseconds: i * 80),
+                              duration: 280.ms, curve: Curves.easeOutCubic);
+                    }),
                   ],
                 ),
               ),
@@ -1191,7 +1191,7 @@ class _UpcomingHabitsBanner extends ConsumerWidget {
   }
 }
 
-class _HabitRow extends StatelessWidget {
+class _HabitRow extends StatefulWidget {
   final HabitDoc habit;
   final IconData iconData;
   final VoidCallback onTap;
@@ -1203,74 +1203,117 @@ class _HabitRow extends StatelessWidget {
   });
 
   @override
+  State<_HabitRow> createState() => _HabitRowState();
+}
+
+class _HabitRowState extends State<_HabitRow> {
+  final _burstKey = GlobalKey<AppParticleBurstState>();
+
+  @override
   Widget build(BuildContext context) {
-    final accent = Color(habit.colorValue);
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: accent.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accent.withOpacity(0.15)),
-        ),
-        child: Row(
-          children: [
-            Icon(iconData, color: accent, size: 15),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                habit.title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85),
+    final accent = Color(widget.habit.colorValue);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AppAnimatedPressable(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            _burstKey.currentState?.burst();
+            widget.onTap();
+          },
+          pressScale: 0.97,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: accent.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Icon(widget.iconData, color: accent, size: 15),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.habit.title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: accent.withValues(alpha: 0.4), width: 1.5),
+                  ),
+                  child: Icon(
+                    PhosphorIconsRegular.check,
+                    size: 12,
+                    color: accent.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ),
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: accent.withOpacity(0.4), width: 1.5),
-              ),
-              child: Icon(
-                PhosphorIconsRegular.check,
-                size: 12,
-                color: accent.withOpacity(0.5),
-              ),
+          ),
+        ),
+        // Particle burst overlay centered on the row
+        Positioned(
+          left: 0,
+          right: 0,
+          top: -10,
+          child: Center(
+            child: AppParticleBurst(
+              key: _burstKey,
+              primaryColor: accent,
+              particleCount: 14,
+              radius: 40,
             ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Pulsing Border Strip ──────────────────────────────────────────────────────
+/// 3px wide left-border gradient strip that pulses opacity — used in AI insight card.
+class _PulsingBorderStrip extends StatelessWidget {
+  final List<Color> colors;
+  const _PulsingBorderStrip({required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 4,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
       ),
-    );
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 1600.ms, curve: Curves.easeInOut)
+        .then()
+        .fadeOut(duration: 1600.ms, curve: Curves.easeInOut);
   }
 }
 
 // ── AI Daily Insight Card ─────────────────────────────────────────────────────
 class _AiInsightCard extends ConsumerWidget {
-  final bool isEmpty;
-  const _AiInsightCard({this.isEmpty = false});
+  const _AiInsightCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insightAsync = ref.watch(dailyInsightProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // #44 – show a friendly placeholder if no data logged yet
-    if (isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: _buildEmptyState(context, ref, isDark),
-      ).animate().fadeIn(delay: 400.ms, duration: 400.ms)
-          .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic);
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1283,93 +1326,148 @@ class _AiInsightCard extends ConsumerWidget {
         .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic);
   }
 
-  Widget _buildEmptyState(BuildContext context, WidgetRef ref, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF1A1B2E), const Color(0xFF13151F)]
-              : [const Color(0xFFF0F0FF), const Color(0xFFE8EAFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.softIndigo.withOpacity(isDark ? 0.25 : 0.15),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.softIndigo, AppColors.dynamicMint],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
+    Widget _buildCard(BuildContext context, WidgetRef ref, String text, bool isDark) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1A1B2E), const Color(0xFF13151F)]
+                : [const Color(0xFFF0F0FF), const Color(0xFFE8EAFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.softIndigo.withValues(alpha: isDark ? 0.25 : 0.15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.softIndigo.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-          ).animate(onPlay: (c) => c.repeat(reverse: true))
-              .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.3)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'AI INSIGHT',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                    color: AppColors.softIndigo.withOpacity(0.8),
-                  ),
+                // Pulsing 3px gradient left border strip
+                _PulsingBorderStrip(
+                  colors: [AppColors.softIndigo, AppColors.dynamicMint],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Log your first activity and I\'ll generate a personalised insight just for you.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    fontWeight: FontWeight.w500,
-                    color: isDark
-                        ? Colors.white.withOpacity(0.6)
-                        : AppColors.lightTextSecondary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    ref.read(chatPrefilledMessageProvider.notifier).state =
-                        'I\'m just getting started. What should I focus on first for my health?';
-                    context.push('/chat');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.softIndigo, AppColors.dynamicMint],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.chat_bubble_outline_rounded,
-                            color: Colors.white, size: 13),
-                        SizedBox(width: 5),
-                        Text(
-                          'Ask AI Coach',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.softIndigo.withValues(alpha: 0.4),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(PhosphorIconsFill.sparkle, color: Colors.white, size: 18),
+                        )
+                            .animate(onPlay: (c) => c.repeat(reverse: true))
+                            .shimmer(duration: 2000.ms, color: Colors.white.withValues(alpha: 0.3)),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'AI INSIGHT',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.5,
+                                      color: AppColors.softIndigo.withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  GestureDetector(
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      ref.read(dailyInsightProvider.notifier).refresh();
+                                    },
+                                    child: Icon(
+                                      PhosphorIconsRegular.arrowsClockwise,
+                                      size: 14,
+                                      color: AppColors.softIndigo.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              // MI-10: Typewriter reveal
+                              AppTypewriterText(
+                                text: text,
+                                charDelayMs: 18,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  height: 1.55,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.85)
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  ref.read(chatPrefilledMessageProvider.notifier).state =
+                                      'Tell me more about this insight: $text';
+                                  context.push('/chat');
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [AppColors.softIndigo, AppColors.dynamicMint],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(PhosphorIconsFill.chatCircle,
+                                          color: Colors.white, size: 13),
+                                      SizedBox(width: 5),
+                                      Text(
+                                        'Chat about this',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -1379,145 +1477,9 @@ class _AiInsightCard extends ConsumerWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCard(BuildContext context, WidgetRef ref, String text, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF1A1B2E), const Color(0xFF13151F)]
-              : [const Color(0xFFF0F0FF), const Color(0xFFE8EAFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.softIndigo.withOpacity(isDark ? 0.25 : 0.15),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.softIndigo.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.softIndigo, AppColors.dynamicMint],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.softIndigo.withOpacity(0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-          )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .shimmer(duration: 2000.ms, color: Colors.white.withOpacity(0.3)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'AI INSIGHT',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: AppColors.softIndigo.withOpacity(0.8),
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        ref.read(dailyInsightProvider.notifier).refresh();
-                      },
-                      child: Icon(
-                        PhosphorIconsRegular.arrowsClockwise,
-                        size: 14,
-                        color: AppColors.softIndigo.withOpacity(0.5),
-                      ),
-                    ),
-                  ],
-                ),
-                  const SizedBox(height: 6),
-                  Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.55,
-                      fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? Colors.white.withOpacity(0.85)
-                          : AppColors.lightTextPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ref.read(chatPrefilledMessageProvider.notifier).state =
-                          'Tell me more about this insight: $text';
-                      context.push('/chat');
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.softIndigo, AppColors.dynamicMint],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded,
-                              color: Colors.white, size: 13),
-                          SizedBox(width: 5),
-                          Text(
-                            'Chat about this',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildShimmer(bool isDark) {
     return Container(
@@ -1527,7 +1489,7 @@ class _AiInsightCard extends ConsumerWidget {
         color: isDark ? const Color(0xFF1A1B2E) : const Color(0xFFF0F0FF),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppColors.softIndigo.withOpacity(0.1),
+          color: AppColors.softIndigo.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -1535,7 +1497,7 @@ class _AiInsightCard extends ConsumerWidget {
           Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: AppColors.softIndigo.withOpacity(0.1),
+              color: AppColors.softIndigo.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -1546,18 +1508,18 @@ class _AiInsightCard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(height: 8, width: 80,
-                    decoration: BoxDecoration(color: AppColors.softIndigo.withOpacity(0.15), borderRadius: BorderRadius.circular(4))),
+                    decoration: BoxDecoration(color: AppColors.softIndigo.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4))),
                 const SizedBox(height: 10),
-                Container(height: 8, decoration: BoxDecoration(color: AppColors.softIndigo.withOpacity(0.1), borderRadius: BorderRadius.circular(4))),
+                Container(height: 8, decoration: BoxDecoration(color: AppColors.softIndigo.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4))),
                 const SizedBox(height: 6),
-                Container(height: 8, width: 180, decoration: BoxDecoration(color: AppColors.softIndigo.withOpacity(0.08), borderRadius: BorderRadius.circular(4))),
+                Container(height: 8, width: 180, decoration: BoxDecoration(color: AppColors.softIndigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4))),
               ],
             ),
           ),
         ],
       ),
     ).animate(onPlay: (c) => c.repeat(reverse: true))
-        .shimmer(duration: 1200.ms, color: AppColors.softIndigo.withOpacity(0.05));
+        .shimmer(duration: 1200.ms, color: AppColors.softIndigo.withValues(alpha: 0.05));
   }
 }
 
@@ -1575,11 +1537,9 @@ class _ActiveWorkoutBanner extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          context.push('/workout/player');
-        },
+      child: AppAnimatedPressable(
+        onTap: () => context.push('/workout/player'),
+        haptic: HapticFeedbackType.medium,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1591,7 +1551,7 @@ class _ActiveWorkoutBanner extends ConsumerWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF3D3D).withOpacity(0.35),
+                color: const Color(0xFFFF3D3D).withValues(alpha: 0.35),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -1602,7 +1562,7 @@ class _ActiveWorkoutBanner extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Icon(PhosphorIconsFill.barbell, color: Colors.white, size: 22),
@@ -1653,7 +1613,7 @@ class _ActiveWorkoutBanner extends ConsumerWidget {
                     margin: const EdgeInsets.only(top: 4),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Text(
@@ -1680,18 +1640,29 @@ class _ActiveWorkoutBanner extends ConsumerWidget {
 class _WeeklyBanner extends ConsumerWidget {
   const _WeeklyBanner();
 
+  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(weeklyStatsProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Normalize step counts to 0–1 (goal = 10 000)
+    const stepGoal = 10000.0;
+    final stepValues = stats.days
+        .map((d) => (d.stepCount / stepGoal).clamp(0.0, 1.0))
+        .toList();
+    // Pad to exactly 7 if fewer days (shouldn't happen but safety)
+    while (stepValues.length < 7) stepValues.add(0.0);
+
+    // Today = last item (index 6) = Sunday slot wrapped correctly
+    // Highlight today (rightmost bar = current weekday)
+    final todayIdx = 6;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          context.push('/weekly');
-        },
+      child: AppAnimatedPressable(
+        onTap: () => context.push('/weekly'),
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -1704,73 +1675,90 @@ class _WeeklyBanner extends ConsumerWidget {
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppColors.softIndigo.withOpacity(isDark ? 0.2 : 0.12),
+              color: AppColors.softIndigo.withValues(alpha: isDark ? 0.2 : 0.12),
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.softIndigo.withOpacity(0.08),
+                color: AppColors.softIndigo.withValues(alpha: 0.08),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.softIndigo, Color(0xFF9B59B6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.softIndigo, Color(0xFF9B59B6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.softIndigo.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      PhosphorIconsFill.chartBar,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.softIndigo.withOpacity(0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'WEEKLY OVERVIEW',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                            color: AppColors.softIndigo,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${stats.totalWorkouts} workouts · ${stats.avgSteps} avg steps',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  PhosphorIconsFill.chartBar,
-                  color: Colors.white,
-                  size: 22,
-                ),
+                  ),
+                  Icon(
+                    PhosphorIconsRegular.caretRight,
+                    color: AppColors.softIndigo.withValues(alpha: 0.6),
+                    size: 18,
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'WEEKLY OVERVIEW',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        color: AppColors.softIndigo,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${stats.totalWorkouts} workouts · ${stats.avgSteps} avg steps',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                PhosphorIconsRegular.caretRight,
-                color: AppColors.softIndigo.withOpacity(0.6),
-                size: 18,
+              const SizedBox(height: 16),
+              // 7-column bar chart
+              AppWeeklyBarChart(
+                values: stepValues,
+                labels: _dayLabels,
+                barColors: const [AppColors.softIndigo],
+                highlightColor: AppColors.amberGlow,
+                highlightIndex: todayIdx,
+                height: 56,
+                barWidth: 22,
               ),
             ],
           ),
@@ -1871,25 +1859,23 @@ class _HealthToolCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = gradientColors.first;
 
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push(route);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.charcoalGlass : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accent.withOpacity(isDark ? 0.18 : 0.12)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0 : 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
+      return AppAnimatedPressable(
+        onTap: () => context.push(route),
+        haptic: HapticFeedbackType.light,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.charcoalGlass : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: accent.withValues(alpha: isDark ? 0.18 : 0.12)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0 : 0.04),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
         child: Row(
           children: [
             Container(
@@ -1904,7 +1890,7 @@ class _HealthToolCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: accent.withOpacity(0.35),
+                    color: accent.withValues(alpha: 0.35),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -1932,7 +1918,7 @@ class _HealthToolCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: badgeColor.withOpacity(0.15),
+                            color: badgeColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1955,7 +1941,7 @@ class _HealthToolCard extends StatelessWidget {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.45),
+                          .withValues(alpha: 0.45),
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1964,7 +1950,7 @@ class _HealthToolCard extends StatelessWidget {
             ),
             Icon(
               PhosphorIconsRegular.caretRight,
-              color: accent.withOpacity(0.5),
+              color: accent.withValues(alpha: 0.5),
               size: 16,
             ),
           ],
@@ -1994,7 +1980,7 @@ void _showSleepLogSheet(BuildContext context, WidgetRef ref) {
           content: Text('Sleep logged: $label ($quality) ✓'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF6B7AFF).withOpacity(0.9),
+          backgroundColor: const Color(0xFF6B7AFF).withValues(alpha: 0.9),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
         ));
@@ -2150,9 +2136,9 @@ class _SleepLogSheetState extends State<_SleepLogSheet> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.08),
+              color: accent.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: accent.withOpacity(0.2)),
+              border: Border.all(color: accent.withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -2196,12 +2182,12 @@ class _SleepLogSheetState extends State<_SleepLogSheet> {
                     decoration: BoxDecoration(
                       color: selected
                           ? accent
-                          : accent.withOpacity(0.08),
+                          : accent.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                           color: selected
                               ? accent
-                              : accent.withOpacity(0.2)),
+                              : accent.withValues(alpha: 0.2)),
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -2269,13 +2255,13 @@ class _TimeRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isDark
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.03),
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: isDark
-                  ? Colors.white.withOpacity(0.1)
-                  : Colors.black.withOpacity(0.08)),
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.08)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2292,7 +2278,7 @@ class _TimeRow extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: accent.withOpacity(0.12),
+                color: accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -2330,7 +2316,7 @@ void _showStepsDetailSheet(
           content: Text('Steps updated: $steps ✓'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.dynamicMint.withOpacity(0.9),
+          backgroundColor: AppColors.dynamicMint.withValues(alpha: 0.9),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -2385,14 +2371,14 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
           child: Container(
             decoration: BoxDecoration(
               color: isDark
-                  ? AppColors.deepObsidian.withOpacity(0.96)
-                  : Colors.white.withOpacity(0.98),
+                  ? AppColors.deepObsidian.withValues(alpha: 0.96)
+                  : Colors.white.withValues(alpha: 0.98),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(28)),
               border: Border.all(
                   color: isDark
-                      ? Colors.white.withOpacity(0.07)
-                      : Colors.black.withOpacity(0.06)),
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.black.withValues(alpha: 0.06)),
             ),
             child: ListView(
               controller: scrollController,
@@ -2406,8 +2392,8 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.black.withOpacity(0.12),
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.black.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2424,7 +2410,7 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                              color: accent.withOpacity(0.35),
+                              color: accent.withValues(alpha: 0.35),
                               blurRadius: 12,
                               offset: const Offset(0, 4))
                         ],
@@ -2509,7 +2495,7 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                     Container(
                       height: 12,
                       decoration: BoxDecoration(
-                        color: accent.withOpacity(0.12),
+                        color: accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
@@ -2523,7 +2509,7 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                           borderRadius: BorderRadius.circular(6),
                           boxShadow: [
                             BoxShadow(
-                                color: accent.withOpacity(0.4), blurRadius: 8)
+                                color: accent.withValues(alpha: 0.4), blurRadius: 8)
                           ],
                         ),
                       ),
@@ -2556,23 +2542,23 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                         color: isDark ? Colors.white38 : Colors.black38),
                     filled: true,
                     fillColor: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.04),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
                           color: isDark
-                              ? Colors.white.withOpacity(0.1)
-                              : Colors.black.withOpacity(0.1)),
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.1)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
                           color: isDark
-                              ? Colors.white.withOpacity(0.08)
-                              : Colors.black.withOpacity(0.08)),
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.08)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -2599,10 +2585,10 @@ class _StepsDetailSheetState extends State<_StepsDetailSheet> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: accent.withOpacity(0.1),
+                          color: accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border:
-                              Border.all(color: accent.withOpacity(0.25)),
+                              Border.all(color: accent.withValues(alpha: 0.25)),
                         ),
                         child: Text(
                           '+$v',
@@ -2666,7 +2652,7 @@ void _showWaterAmountSheet(BuildContext context, WidgetRef ref) {
           content: Text('Added ${ml}ml of water ✓'),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF41C9E2).withOpacity(0.9),
+          backgroundColor: const Color(0xFF41C9E2).withValues(alpha: 0.9),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 90),
@@ -2709,14 +2695,14 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
             decoration: BoxDecoration(
               color: isDark
-                  ? AppColors.deepObsidian.withOpacity(0.96)
-                  : Colors.white.withOpacity(0.98),
+                  ? AppColors.deepObsidian.withValues(alpha: 0.96)
+                  : Colors.white.withValues(alpha: 0.98),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(28)),
               border: Border.all(
                   color: isDark
-                      ? Colors.white.withOpacity(0.07)
-                      : Colors.black.withOpacity(0.06)),
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.black.withValues(alpha: 0.06)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2730,8 +2716,8 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                     margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.black.withOpacity(0.12),
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.black.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2743,7 +2729,7 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                     Container(
                       padding: const EdgeInsets.all(9),
                       decoration: BoxDecoration(
-                        color: _accent.withOpacity(0.15),
+                        color: _accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(PhosphorIconsFill.drop,
@@ -2789,10 +2775,10 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 11),
                         decoration: BoxDecoration(
-                          color: _accent.withOpacity(0.1),
+                          color: _accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border:
-                              Border.all(color: _accent.withOpacity(0.25)),
+                              Border.all(color: _accent.withValues(alpha: 0.25)),
                         ),
                         child: Column(
                           children: [
@@ -2814,7 +2800,7 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                                           : 'Large',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: _accent.withOpacity(0.7),
+                                color: _accent.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -2855,23 +2841,23 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                                   isDark ? Colors.white38 : Colors.black38),
                           filled: true,
                           fillColor: isDark
-                              ? Colors.white.withOpacity(0.05)
-                              : Colors.black.withOpacity(0.04),
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.04),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
                                 color: isDark
-                                    ? Colors.white.withOpacity(0.1)
-                                    : Colors.black.withOpacity(0.1)),
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : Colors.black.withValues(alpha: 0.1)),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide(
                                 color: isDark
-                                    ? Colors.white.withOpacity(0.08)
-                                    : Colors.black.withOpacity(0.08)),
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : Colors.black.withValues(alpha: 0.08)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -2903,7 +2889,7 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: _accent.withOpacity(0.35),
+                              color: _accent.withValues(alpha: 0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -2924,79 +2910,7 @@ class _WaterAmountSheetState extends State<_WaterAmountSheet> {
     }
   }
 
-// ── #44 First-Launch Hint Banner ─────────────────────────────────────────────
-class _FirstLaunchHint extends StatelessWidget {
-  const _FirstLaunchHint();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.softIndigo.withOpacity(0.12)
-              : AppColors.softIndigo.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.softIndigo.withOpacity(isDark ? 0.3 : 0.18),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.softIndigo.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                PhosphorIconsFill.sparkle,
-                size: 18,
-                color: AppColors.softIndigo,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome! Let\'s get started',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.lightTextPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Log water, meals, steps or sleep to see your stats come alive.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.lightTextSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 500.ms)
-        .slideY(begin: -0.1, end: 0, duration: 500.ms, curve: Curves.easeOutCubic);
-  }
-}
-
-// ── #45 Welcome Banner (first-time only) ─────────────────────────────────────
+// ── Welcome Banner (first-time only) ─────────────────────────────────────────
 class _WelcomeBanner extends StatefulWidget {
   const _WelcomeBanner();
 
@@ -3069,11 +2983,11 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: AppColors.softIndigo.withOpacity(isDark ? 0.35 : 0.2),
+                color: AppColors.softIndigo.withValues(alpha: isDark ? 0.35 : 0.2),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.softIndigo.withOpacity(0.12),
+                  color: AppColors.softIndigo.withValues(alpha: 0.12),
                   blurRadius: 20,
                   offset: const Offset(0, 6),
                 ),
@@ -3137,8 +3051,8 @@ class _WelcomeBannerState extends State<_WelcomeBanner>
                       PhosphorIconsRegular.x,
                       size: 18,
                       color: isDark
-                          ? Colors.white.withOpacity(0.4)
-                          : Colors.black.withOpacity(0.3),
+                          ? Colors.white.withValues(alpha: 0.4)
+                          : Colors.black.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -3187,12 +3101,12 @@ class _TrophyModalState extends State<_TrophyModal> {
               color: isDark ? const Color(0xFF1A1B2E) : Colors.white,
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
-                color: def.color.withOpacity(isDark ? 0.4 : 0.25),
+                color: def.color.withValues(alpha: isDark ? 0.4 : 0.25),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: def.color.withOpacity(0.25),
+                  color: def.color.withValues(alpha: 0.25),
                   blurRadius: 40,
                   spreadRadius: 4,
                 ),
@@ -3207,14 +3121,14 @@ class _TrophyModalState extends State<_TrophyModal> {
                   height: 80,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [def.color, def.color.withOpacity(0.6)],
+                      colors: [def.color, def.color.withValues(alpha: 0.6)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: def.color.withOpacity(0.5),
+                        color: def.color.withValues(alpha: 0.5),
                         blurRadius: 24,
                         spreadRadius: 4,
                       ),
@@ -3223,7 +3137,7 @@ class _TrophyModalState extends State<_TrophyModal> {
                   child: Icon(def.icon, color: Colors.white, size: 36),
                 )
                     .animate(onPlay: (c) => c.repeat(reverse: true))
-                    .shimmer(duration: 1200.ms, color: Colors.white.withOpacity(0.35))
+                    .shimmer(duration: 1200.ms, color: Colors.white.withValues(alpha: 0.35))
                     .scale(
                       begin: const Offset(1.0, 1.0),
                       end: const Offset(1.06, 1.06),
@@ -3235,9 +3149,9 @@ class _TrophyModalState extends State<_TrophyModal> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                   decoration: BoxDecoration(
-                    color: def.color.withOpacity(0.12),
+                    color: def.color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: def.color.withOpacity(0.3)),
+                    border: Border.all(color: def.color.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -3285,12 +3199,86 @@ class _TrophyModalState extends State<_TrophyModal> {
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark
-                        ? Colors.white.withOpacity(0.3)
-                        : Colors.black.withOpacity(0.3),
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : Colors.black.withValues(alpha: 0.3),
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dashboard Header Avatar ───────────────────────────────────────────────────
+class _DashboardAvatar extends StatelessWidget {
+  final String? photoUrl;
+  final String displayName;
+
+  const _DashboardAvatar({required this.photoUrl, required this.displayName});
+
+  String get _initials {
+    final parts = displayName.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || displayName.isEmpty) return 'U';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLocalFile = photoUrl != null && photoUrl!.startsWith('/');
+    final isNetwork = photoUrl != null && !photoUrl!.startsWith('/');
+
+    Widget content;
+    if (isLocalFile) {
+      content = Image.file(File(photoUrl!), fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _InitialsAvatar(initials: _initials));
+    } else if (isNetwork) {
+      content = Image.network(photoUrl!, fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _InitialsAvatar(initials: _initials));
+    } else {
+      content = _InitialsAvatar(initials: _initials);
+    }
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [AppColors.dynamicMint, AppColors.softIndigo],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.softIndigo.withValues(alpha: 0.40),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: ClipOval(child: content),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  final String initials;
+  const _InitialsAvatar({required this.initials});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.transparent,
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: initials.length > 1 ? 14 : 18,
           ),
         ),
       ),

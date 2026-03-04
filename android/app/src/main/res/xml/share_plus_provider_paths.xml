@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="share_plus_cache" path="."/>
+    <external-cache-path name="share_plus_external_cache" path="."/>
+    <files-path name="share_plus_files" path="."/>
+    <external-files-path name="share_plus_external_files" path="."/>
+    <external-path name="share_plus_external" path="."/>
+</paths>
